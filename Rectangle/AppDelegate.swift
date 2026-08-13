@@ -343,6 +343,7 @@ extension AppDelegate: NSMenuDelegate {
         
         updateWindowActionMenuItems(menu: menu)
         updateTodoModeMenuItems(menu: menu)
+        refreshFancyZonesMenuItems()
 
         viewLoggingMenuItem.keyEquivalentModifierMask = .option
         quitMenuItem.keyEquivalent = "q"
@@ -454,8 +455,9 @@ extension AppDelegate: NSMenuDelegate {
 
         menuIndex += 1
         addTodoModeMenuItems(startingIndex: menuIndex)
-        // Track total dynamic items: window actions + separators + todo items (4 items + 1 separator)
-        dynamicMenuItemCount = menuIndex + 5
+        addFancyZonesMenuItems(startingIndex: menuIndex + 5)
+        // Track total dynamic items: window actions + separators + todo items (5) + fancy zones (5)
+        dynamicMenuItemCount = menuIndex + 10
     }
 
     @objc func rebuildMenu() {
@@ -608,6 +610,134 @@ extension AppDelegate {
         todoReflowMenuItem.isEnabled = Defaults.todoMode.enabled
         
         todoWindowMenuItem.isHidden = !applicationToggle.todoAppIsActive() || TodoManager.isTodoWindowFront()
+    }
+}
+
+// fancy zones
+extension AppDelegate {
+    enum FancyZonesItem {
+        case toggle, mode, grid, arrange, separator
+
+        var tag: Int {
+            switch self {
+            case .toggle: return 201
+            case .mode: return 202
+            case .grid: return 203
+            case .arrange: return 204
+            case .separator: return 205
+            }
+        }
+
+        static let tags = [201, 202, 203, 204, 205]
+    }
+
+    private func addFancyZonesMenuItems(startingIndex: Int) {
+        var menuIndex = startingIndex
+
+        let toggleTitle = NSLocalizedString("FancyZones.Toggle", tableName: "Main", value: "Zone Layout", comment: "")
+        let toggleItem = NSMenuItem(title: toggleTitle, action: #selector(toggleFancyZones), keyEquivalent: "")
+        toggleItem.tag = FancyZonesItem.toggle.tag
+        toggleItem.target = self
+        mainStatusMenu.insertItem(toggleItem, at: menuIndex)
+        menuIndex += 1
+
+        let modeTitle = NSLocalizedString("FancyZones.Mode", tableName: "Main", value: "Smart Layout", comment: "")
+        let modeItem = NSMenuItem(title: modeTitle, action: #selector(toggleFancyZonesMode), keyEquivalent: "")
+        modeItem.tag = FancyZonesItem.mode.tag
+        modeItem.target = self
+        mainStatusMenu.insertItem(modeItem, at: menuIndex)
+        menuIndex += 1
+
+        let gridItem = NSMenuItem(title: "", action: #selector(cycleFancyZonesGrid), keyEquivalent: "")
+        gridItem.tag = FancyZonesItem.grid.tag
+        gridItem.target = self
+        mainStatusMenu.insertItem(gridItem, at: menuIndex)
+        menuIndex += 1
+
+        let separator = NSMenuItem.separator()
+        separator.tag = FancyZonesItem.separator.tag
+        mainStatusMenu.insertItem(separator, at: menuIndex)
+        menuIndex += 1
+
+        let arrangeTitle = NSLocalizedString("FancyZones.Arrange", tableName: "Main", value: "Arrange Windows in Zones", comment: "")
+        let arrangeItem = NSMenuItem(title: arrangeTitle, action: #selector(arrangeWindowsInZones), keyEquivalent: "")
+        arrangeItem.tag = FancyZonesItem.arrange.tag
+        arrangeItem.target = self
+        mainStatusMenu.insertItem(arrangeItem, at: menuIndex)
+        menuIndex += 1
+
+        refreshFancyZonesMenuItems()
+    }
+
+    private func refreshFancyZonesMenuItems() {
+        let enabled = ZoneLayout.enabled
+        let isAuto = fancyZonesGlobalMode == .auto
+        let rows = fancyZonesGlobalRows
+        let cols = fancyZonesGlobalCols
+
+        for item in mainStatusMenu.items {
+            guard FancyZonesItem.tags.contains(item.tag) else { continue }
+            switch item.tag {
+            case FancyZonesItem.toggle.tag:
+                item.isHidden = false
+                item.state = enabled ? .on : .off
+            case FancyZonesItem.mode.tag:
+                item.isHidden = !enabled
+                item.state = isAuto ? .on : .off
+            case FancyZonesItem.grid.tag:
+                item.isHidden = !enabled || isAuto
+                item.title = "Grid: \(rows)×\(cols)"
+            case FancyZonesItem.arrange.tag:
+                item.isHidden = !enabled
+            case FancyZonesItem.separator.tag:
+                item.isHidden = !enabled
+            default:
+                break
+            }
+        }
+    }
+
+    private var fancyZonesGlobalMode: ZoneMode {
+        if let raw = UserDefaults.standard.string(forKey: ZoneLayout.modeKey),
+           let mode = ZoneMode(rawValue: raw) {
+            return mode
+        }
+        return .auto
+    }
+
+    private var fancyZonesGlobalRows: Int {
+        let rows = UserDefaults.standard.integer(forKey: ZoneLayout.rowsKey)
+        return rows > 0 ? rows : 2
+    }
+
+    private var fancyZonesGlobalCols: Int {
+        let cols = UserDefaults.standard.integer(forKey: ZoneLayout.colsKey)
+        return cols > 0 ? cols : 3
+    }
+
+    @objc func toggleFancyZones(_ sender: NSMenuItem) {
+        let enabled = sender.state == .off
+        UserDefaults.standard.set(enabled, forKey: ZoneLayout.enabledKey)
+        refreshFancyZonesMenuItems()
+    }
+
+    @objc func toggleFancyZonesMode(_ sender: NSMenuItem) {
+        let next: ZoneMode = fancyZonesGlobalMode == .auto ? .manual : .auto
+        UserDefaults.standard.set(next.rawValue, forKey: ZoneLayout.modeKey)
+        refreshFancyZonesMenuItems()
+    }
+
+    @objc func cycleFancyZonesGrid(_ sender: NSMenuItem) {
+        let candidates = ZoneLayout.candidates
+        let currentIndex = candidates.firstIndex { $0.rows == fancyZonesGlobalRows && $0.cols == fancyZonesGlobalCols } ?? 0
+        let next = candidates[(currentIndex + 1) % candidates.count]
+        UserDefaults.standard.set(next.rows, forKey: ZoneLayout.rowsKey)
+        UserDefaults.standard.set(next.cols, forKey: ZoneLayout.colsKey)
+        refreshFancyZonesMenuItems()
+    }
+
+    @objc func arrangeWindowsInZones(_ sender: NSMenuItem) {
+        WindowAction.arrangeWindowsInZones.postMenu()
     }
 }
 
