@@ -6,6 +6,18 @@ Rectangle is a window management app based on Spectacle, written in Swift.
 
 <img width="962" height="886" alt="image" src="https://github.com/user-attachments/assets/e8d88e5f-7d4f-43bc-a82e-146c42f92d68" />
 
+### Zone Layout
+
+Zone Layout arranges windows into a grid on the current display. It's disabled by default — enable it from the status-bar menu ("Zone Layout").
+
+- **One-key arrange** — bind a shortcut to **Arrange Windows in Zones** in the Keyboard Shortcuts tab (default ⌃Z). It moves every window on the current display into the grid. The display follows the focused window, falling back to the cursor.
+- **Shift + drag** — hold Shift while dragging a window to reveal the zone grid footprint; release to fill the zone under the cursor.
+- **Per-display grid** — each display can have its own grid size (2×2, 2×3, 3×3, …) chosen from the status-bar menu. The optional **Cycle Grid** shortcut steps through grid sizes for the current display only.
+- **Smart layout** — by default the grid size is chosen automatically from the display resolution.
+- **Overflow** — extra windows beyond the grid stack in the last zone.
+
+It can also be triggered by URL with the action name `arrange-windows-in-zones`.
+
 ## System Requirements
 
 Rectangle supports macOS v10.15+. The last version that is supported for macOS 10.13 and 10.14 is https://github.com/rxhanson/Rectangle/releases/tag/v0.73.
@@ -34,18 +46,6 @@ Drag a window to the edge of the screen. When the mouse cursor reaches the edge 
 | Left or right edge, just above or below a corner       | Top or bottom half                     |
 | Bottom left, center, or right third                    | Respective third                       |
 | Bottom left or right third, then drag to bottom center | First or last two thirds, respectively |
-
-### Zone Layout
-
-Zone Layout arranges windows into a grid on the current display. It's disabled by default — enable it from the status-bar menu ("Zone Layout").
-
-- **One-key arrange** — bind a shortcut to **Arrange Windows in Zones** in the Keyboard Shortcuts tab (default ⌃Z). It moves every window on the current display into the grid. The display follows the focused window, falling back to the cursor.
-- **Shift + drag** — hold Shift while dragging a window to reveal the zone grid footprint; release to fill the zone under the cursor.
-- **Per-display grid** — each display can have its own grid size (2×2, 2×3, 3×3, …) chosen from the status-bar menu. The optional **Cycle Grid** shortcut steps through grid sizes for the current display only.
-- **Smart layout** — by default the grid size is chosen automatically from the display resolution.
-- **Overflow** — extra windows beyond the grid stack in the last zone.
-
-It can also be triggered by URL with the action name `arrange-windows-in-zones`.
 
 ### Ignore an app
 
