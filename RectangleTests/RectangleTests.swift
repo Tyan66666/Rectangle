@@ -3660,3 +3660,114 @@ class DerivedWindowIdTests: XCTestCase {
         XCTAssertEqual(Set(ids).count, ids.count)
     }
 }
+
+class ZoneLayoutTests: XCTestCase {
+
+    private func assertRect(_ rect: CGRect, equals expected: CGRect, file: StaticString = #filePath, line: UInt = #line) {
+        XCTAssertEqual(rect.origin.x, expected.origin.x, accuracy: 0.001, file: file, line: line)
+        XCTAssertEqual(rect.origin.y, expected.origin.y, accuracy: 0.001, file: file, line: line)
+        XCTAssertEqual(rect.width, expected.width, accuracy: 0.001, file: file, line: line)
+        XCTAssertEqual(rect.height, expected.height, accuracy: 0.001, file: file, line: line)
+    }
+
+    // MARK: - smartGrid(width:height:)
+
+    func testSmartGridOnFullHD() {
+        // 1920x1080: floor(1920/640)=3 cols, floor(1080/400)=2 rows.
+        let grid = ZoneLayout.smartGrid(width: 1920, height: 1080)
+        XCTAssertEqual(grid.rows, 2)
+        XCTAssertEqual(grid.cols, 3)
+    }
+
+    func testSmartGridOnWide1440p() {
+        // 2560x1440: 4 cols, 3 rows.
+        let grid = ZoneLayout.smartGrid(width: 2560, height: 1440)
+        XCTAssertEqual(grid.rows, 3)
+        XCTAssertEqual(grid.cols, 4)
+    }
+
+    func testSmartGridCapsAtMaxGridCount() {
+        // Very large screen would exceed 4, but is capped by maxGridCount.
+        let grid = ZoneLayout.smartGrid(width: 10000, height: 10000)
+        XCTAssertEqual(grid.rows, 4)
+        XCTAssertEqual(grid.cols, 4)
+    }
+
+    func testSmartGridOnSmallScreen() {
+        // 1280x720: 2 cols, 1 row.
+        let grid = ZoneLayout.smartGrid(width: 1280, height: 720)
+        XCTAssertEqual(grid.rows, 1)
+        XCTAssertEqual(grid.cols, 2)
+    }
+
+    func testSmartGridOnTinyScreen() {
+        // 800x300: height below minTileHeight gives a single row.
+        let grid = ZoneLayout.smartGrid(width: 800, height: 300)
+        XCTAssertEqual(grid.rows, 1)
+        XCTAssertEqual(grid.cols, 1)
+    }
+
+    func testSmartGridOnPortraitScreen() {
+        // 800x2000: 1 col, rows capped at 4.
+        let grid = ZoneLayout.smartGrid(width: 800, height: 2000)
+        XCTAssertEqual(grid.rows, 4)
+        XCTAssertEqual(grid.cols, 1)
+    }
+
+    func testSmartGridDegenerateSize() {
+        XCTAssertEqual(ZoneLayout.smartGrid(width: 0, height: 0).rows, 1)
+        XCTAssertEqual(ZoneLayout.smartGrid(width: 0, height: 0).cols, 1)
+        XCTAssertEqual(ZoneLayout.smartGrid(width: -100, height: 1080).rows, 1)
+        XCTAssertEqual(ZoneLayout.smartGrid(width: -100, height: 1080).cols, 1)
+        XCTAssertEqual(ZoneLayout.smartGrid(width: 1920, height: -100).rows, 1)
+        XCTAssertEqual(ZoneLayout.smartGrid(width: 1920, height: -100).cols, 1)
+    }
+
+    // MARK: - gridZones(rows:cols:in:)
+
+    func testGridZonesCount() {
+        let zones = ZoneLayout.gridZones(rows: 2, cols: 3, in: CGRect(x: 0, y: 0, width: 1200, height: 800))
+        XCTAssertEqual(zones.count, 6)
+    }
+
+    func testGridZonesTileTheFrame() {
+        // 2 rows x 3 cols over 1200x800: each tile is 400x400.
+        let zones = ZoneLayout.gridZones(rows: 2, cols: 3, in: CGRect(x: 0, y: 0, width: 1200, height: 800))
+        // Zone 0 is visually top-left (AppKit: higher y = visually higher).
+        assertRect(zones[0], equals: CGRect(x: 0, y: 400, width: 400, height: 400))
+        assertRect(zones[1], equals: CGRect(x: 400, y: 400, width: 400, height: 400))
+        assertRect(zones[2], equals: CGRect(x: 800, y: 400, width: 400, height: 400))
+        assertRect(zones[3], equals: CGRect(x: 0, y: 0, width: 400, height: 400))
+        assertRect(zones[4], equals: CGRect(x: 400, y: 0, width: 400, height: 400))
+        assertRect(zones[5], equals: CGRect(x: 800, y: 0, width: 400, height: 400))
+    }
+
+    func testGridZonesWithNonZeroOrigin() {
+        let zones = ZoneLayout.gridZones(rows: 1, cols: 2, in: CGRect(x: 100, y: 50, width: 800, height: 600))
+        assertRect(zones[0], equals: CGRect(x: 100, y: 50, width: 400, height: 600))
+        assertRect(zones[1], equals: CGRect(x: 500, y: 50, width: 400, height: 600))
+    }
+
+    func testGridZonesSingleTileIsWholeFrame() {
+        let zones = ZoneLayout.gridZones(rows: 1, cols: 1, in: CGRect(x: 10, y: 20, width: 500, height: 300))
+        XCTAssertEqual(zones.count, 1)
+        assertRect(zones[0], equals: CGRect(x: 10, y: 20, width: 500, height: 300))
+    }
+
+    func testGridZonesThreeByThree() {
+        let zones = ZoneLayout.gridZones(rows: 3, cols: 3, in: CGRect(x: 0, y: 0, width: 900, height: 900))
+        XCTAssertEqual(zones.count, 9)
+        assertRect(zones[0], equals: CGRect(x: 0, y: 600, width: 300, height: 300))
+        assertRect(zones[2], equals: CGRect(x: 600, y: 600, width: 300, height: 300))
+        assertRect(zones[4], equals: CGRect(x: 300, y: 300, width: 300, height: 300))
+        assertRect(zones[6], equals: CGRect(x: 0, y: 0, width: 300, height: 300))
+        assertRect(zones[8], equals: CGRect(x: 600, y: 0, width: 300, height: 300))
+    }
+
+    func testGridZonesInvalidInputReturnsEmpty() {
+        XCTAssertTrue(ZoneLayout.gridZones(rows: 0, cols: 2, in: CGRect(x: 0, y: 0, width: 800, height: 600)).isEmpty)
+        XCTAssertTrue(ZoneLayout.gridZones(rows: 2, cols: 0, in: CGRect(x: 0, y: 0, width: 800, height: 600)).isEmpty)
+        XCTAssertTrue(ZoneLayout.gridZones(rows: 2, cols: 2, in: CGRect(x: 0, y: 0, width: 0, height: 600)).isEmpty)
+        XCTAssertTrue(ZoneLayout.gridZones(rows: 2, cols: 2, in: CGRect(x: 0, y: 0, width: 800, height: 0)).isEmpty)
+    }
+}
