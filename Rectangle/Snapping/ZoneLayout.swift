@@ -3,20 +3,14 @@
 /// Zone-based layout system: the screen's visible frame is divided into a grid
 /// of zones. Two features share this single layout definition:
 ///
-///  * drag-to-zone — hold the configured modifier while dragging a window to see
-///    the zone under the cursor and drop into it (see ``SnappingManager``), and
+///  * drag-to-zone — hold Shift while dragging a window to see the zone under
+///    the cursor and drop into it (see ``SnappingManager``), and
 ///  * auto-arrange — tile every window on the current screen into the zones.
 ///
-/// A screen's grid is resolved one of two ways:
-///
-///  * ``ZoneMode/auto`` (default) — pick the grid whose tiles stay above the
-///    minimum comfortable size, so wide screens get more columns and tall or
-///    portrait screens get more rows (see ``smartGrid(width:height:)``).
-///  * ``ZoneMode/manual`` — a user-selected rows x cols from ``candidates``.
-///
-/// The mode and the manual grid are global by default but can be overridden per
-/// monitor. All configuration lives in `UserDefaults.standard` (the app's own
-/// domain), so it can be set from the status menu or via `defaults write`.
+/// A screen's grid is the user-selected rows x cols from ``candidates``, global
+/// by default but overridable per monitor. All configuration lives in
+/// `UserDefaults.standard` (the app's own domain), so it can be set from the
+/// status menu or via `defaults write`.
 ///
 /// Zones are returned in AppKit screen coordinates (bottom-left origin), which
 /// is what ``FootprintWindow`` consumes directly; convert with ``CGRect``'s
@@ -24,35 +18,27 @@
 
 import Cocoa
 
-enum ZoneMode: String {
-    case auto
-    case manual
-}
-
 enum ZoneLayout {
 
     // MARK: - Configuration keys (UserDefaults)
 
     static let enabledKey = "fancyZonesEnabled"
-    static let modeKey = "fancyZonesMode"
     static let rowsKey = "fancyZonesRows"
     static let colsKey = "fancyZonesCols"
     static let gridCycleKey = "cycleFancyZonesGrid"
+    static let colorKey = "fancyZonesColor"
+    static let cycleSquareOnlyKey = "cycleSquareFancyZonesOnly"
+    static let cycleSquareMaxKey = "cycleSquareFancyZonesMax"
 
     /// Manual layouts selectable from the status menu, as (rows, cols).
     static let candidates: [(rows: Int, cols: Int)] = [
         (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4), (3, 3), (3, 4)
     ]
 
-    /// Minimum comfortable tile size (points) used by the smart layout.
-    /// Below these, most apps' content starts to feel cramped.
-    static let minTileWidth: CGFloat = 640
-    static let minTileHeight: CGFloat = 600
+    /// Range of n in the n×n grids offered by the cycle restriction.
+    static let cycleSquareRange = 2...6
 
-    /// Upper bound on rows and columns for the smart layout (max 16 zones).
-    static let maxGridCount = 4
-
-    // MARK: - Feature + mode
+    // MARK: - Feature
 
     static var enabled: Bool {
         UserDefaults.standard.bool(forKey: enabledKey)
@@ -66,28 +52,10 @@ enum ZoneLayout {
         screen.localizedName
     }
 
-    static func mode(for screen: NSScreen) -> ZoneMode {
-        if let raw = UserDefaults.standard.string(forKey: perMonitorKey(modeKey, screen)),
-           let mode = ZoneMode(rawValue: raw) {
-            return mode
-        }
-        if let raw = UserDefaults.standard.string(forKey: modeKey),
-           let mode = ZoneMode(rawValue: raw) {
-            return mode
-        }
-        return .auto
-    }
-
     // MARK: - Grid resolution
 
     static func grid(for screen: NSScreen) -> (rows: Int, cols: Int) {
-        switch mode(for: screen) {
-        case .manual:
-            return (manualRows(for: screen), manualCols(for: screen))
-        case .auto:
-            let vf = screen.adjustedVisibleFrame()
-            return smartGrid(width: vf.width, height: vf.height)
-        }
+        (manualRows(for: screen), manualCols(for: screen))
     }
 
     static func manualRows(for screen: NSScreen) -> Int {
@@ -111,27 +79,84 @@ enum ZoneLayout {
         UserDefaults.standard.set(cols, forKey: perMonitorKey(colsKey, screen))
     }
 
-    /// Snapshots every screen's current grid into its per-monitor keys, so
-    /// switching from auto to manual mode doesn't change any screen's layout.
-    static func snapshotGridsForAllScreens() {
-        for screen in NSScreen.screens {
-            let current = grid(for: screen)
-            setManualGrid(rows: current.rows, cols: current.cols, for: screen)
-        }
+    // MARK: - Cycle grid restriction
+
+    /// When true, the Cycle Grid shortcut only cycles through the n×n grids
+    /// from 2×2 up to ``cycleSquareMax`` (instead of every candidate).
+    static var cycleSquareOnly: Bool {
+        get { Defaults.zoneCycleSquareOnly.enabled }
+        set { Defaults.zoneCycleSquareOnly.enabled = newValue }
     }
 
-    /// Smart layout: the largest grid whose tiles stay at or above the minimum
-    /// comfortable size, bounded by ``maxGridCount``. Pure and deterministic
-    /// (no UserDefaults) so it can be unit-tested.
-    ///
-    /// Derivation: `cols = clamp(floor(width / minTileWidth), 1, max)`. A tile
-    /// narrower than 640pt (or shorter than 600pt) is uncomfortable to use, so
-    /// we stop adding columns/rows once the next one would dip below that.
-    static func smartGrid(width: CGFloat, height: CGFloat) -> (rows: Int, cols: Int) {
-        guard width > 0, height > 0 else { return (1, 1) }
-        let cols = min(maxGridCount, max(1, Int(floor(width / minTileWidth))))
-        let rows = min(maxGridCount, max(1, Int(floor(height / minTileHeight))))
-        return (rows, cols)
+    /// Upper bound n for square-only cycling, clamped to ``cycleSquareRange``.
+    static var cycleSquareMax: Int {
+        get { min(max(Defaults.zoneCycleSquareMax.value, cycleSquareRange.lowerBound), cycleSquareRange.upperBound) }
+        set { Defaults.zoneCycleSquareMax.value = newValue }
+    }
+
+    /// Grids the Cycle Grid shortcut steps through: every candidate by default,
+    /// or only the square grids 2×2…n×n when the square-only option is enabled.
+    static func cycleCandidates() -> [(rows: Int, cols: Int)] {
+        guard cycleSquareOnly else { return candidates }
+        return (cycleSquareRange.lowerBound...cycleSquareMax).map { (rows: $0, cols: $0) }
+    }
+
+    /// Starting index within the current cycle candidates for the current grid
+    /// of `screen`: the grid itself when listed, otherwise the nearest grid by
+    /// tile count (ties resolve to the larger grid) so cycling is well-defined.
+    static func cycleIndex(for screen: NSScreen) -> Int {
+        let grid = grid(for: screen)
+        return cycleIndex(rows: grid.rows, cols: grid.cols)
+    }
+
+    /// Pure variant of ``cycleIndex(for:)`` that takes the current grid
+    /// directly (used by unit tests). Depends only on the cycle settings.
+    static func cycleIndex(rows: Int, cols: Int) -> Int {
+        let grids = cycleCandidates()
+        if let index = grids.firstIndex(where: { $0.rows == rows && $0.cols == cols }) {
+            return index
+        }
+        var best = 0
+        var bestDistance = Int.max
+        let currentArea = rows * cols
+        for (index, candidate) in grids.enumerated() {
+            let distance = abs(candidate.rows * candidate.cols - currentArea)
+            let candidateArea = candidate.rows * candidate.cols
+            if distance < bestDistance
+                || (distance == bestDistance && candidateArea > grids[best].rows * grids[best].cols) {
+                bestDistance = distance
+                best = index
+            }
+        }
+        return best
+    }
+
+    // MARK: - Per-display zone color
+
+    /// Custom zone-preview color for `screen`, or nil to fall back to the
+    /// global footprint color.
+    static func color(for screen: NSScreen) -> NSColor? {
+        guard let raw = UserDefaults.standard.string(forKey: perMonitorKey(colorKey, screen)),
+              let data = raw.data(using: .utf8),
+              let color = try? JSONDecoder().decode(CodableColor.self, from: data) else {
+            return nil
+        }
+        return color.nsColor
+    }
+
+    /// Stores a per-display zone color (nil removes the override).
+    static func setColor(_ color: NSColor?, for screen: NSScreen) {
+        let key = perMonitorKey(colorKey, screen)
+        if let color {
+            let sRGB = color.usingColorSpace(.sRGB) ?? color
+            let codable = CodableColor(nsColor: sRGB)
+            if let data = try? JSONEncoder().encode(codable),
+               let raw = String(data: data, encoding: .utf8) {
+                UserDefaults.standard.set(raw, forKey: key)
+            }
+        } else {
+            UserDefaults.standard.removeObject(forKey: key)
+        }
     }
 
     // MARK: - Zone computation (AppKit coordinates, bottom-left origin)

@@ -52,6 +52,57 @@
         }
       }
     },
+    "FancyZones.CycleSquareHint" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When enabled, the Cycle Grid shortcut steps through 2×2 up to the chosen size."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "启用后，循环网格快捷键将按 2×2 到所选大小循环。"
+          }
+        }
+      }
+    },
+    "FancyZones.CycleSquareMax" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Largest n×n grid"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "最大的 n×n 网格"
+          }
+        }
+      }
+    },
+    "FancyZones.CycleSquareOnly" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cycle the grid shortcut only through n×n grids"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "循环网格快捷键只在 n×n 网格中循环"
+          }
+        }
+      }
+    },
     "FancyZones.Grid" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -69,19 +120,19 @@
         }
       }
     },
-    "FancyZones.Mode" : {
+    "FancyZones.Section" : {
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "Smart Layout"
+            "value" : "Zone Layout"
           }
         },
         "zh-Hans" : {
           "stringUnit" : {
             "state" : "translated",
-            "value" : "智能布局"
+            "value" : "分区布局"
           }
         }
       }
@@ -99,6 +150,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分区布局"
+          }
+        }
+      }
+    },
+    "Zone-Set-Btn.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Zone Layout…\"; ObjectID = \"Zone-Set-Btn\";",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Zone Layout…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "分区布局…"
           }
         }
       }

@@ -618,18 +618,17 @@ extension AppDelegate {
 // fancy zones
 extension AppDelegate {
     enum FancyZonesItem {
-        case toggle, mode, arrange, separator
+        case toggle, arrange, separator
 
         var tag: Int {
             switch self {
             case .toggle: return 201
-            case .mode: return 202
             case .arrange: return 204
             case .separator: return 205
             }
         }
 
-        static let tags = [201, 202, 204, 205]
+        static let tags = [201, 204, 205]
         static let screenTagBase = 210
     }
 
@@ -641,13 +640,6 @@ extension AppDelegate {
         toggleItem.tag = FancyZonesItem.toggle.tag
         toggleItem.target = self
         mainStatusMenu.insertItem(toggleItem, at: menuIndex)
-        menuIndex += 1
-
-        let modeTitle = NSLocalizedString("FancyZones.Mode", tableName: "Main", value: "Smart Layout", comment: "")
-        let modeItem = NSMenuItem(title: modeTitle, action: #selector(toggleFancyZonesMode), keyEquivalent: "")
-        modeItem.tag = FancyZonesItem.mode.tag
-        modeItem.target = self
-        mainStatusMenu.insertItem(modeItem, at: menuIndex)
         menuIndex += 1
 
         for (screenIndex, screen) in NSScreen.screens.enumerated() {
@@ -683,7 +675,6 @@ extension AppDelegate {
 
     private func refreshFancyZonesMenuItems() {
         let enabled = ZoneLayout.enabled
-        let isAuto = fancyZonesGlobalMode == .auto
         let screens = NSScreen.screens
 
         for item in mainStatusMenu.items {
@@ -692,9 +683,6 @@ extension AppDelegate {
                 case FancyZonesItem.toggle.tag:
                     item.isHidden = false
                     item.state = enabled ? .on : .off
-                case FancyZonesItem.mode.tag:
-                    item.isHidden = !enabled
-                    item.state = isAuto ? .on : .off
                 case FancyZonesItem.arrange.tag:
                     item.isHidden = !enabled
                 case FancyZonesItem.separator.tag:
@@ -710,19 +698,11 @@ extension AppDelegate {
                 item.title = "\(screen.localizedName): \(grid.rows)×\(grid.cols)"
                 for subItem in item.submenu?.items ?? [] {
                     let candidate = ZoneLayout.candidates[subItem.tag % 100]
-                    subItem.isEnabled = !isAuto
+                    subItem.isEnabled = enabled
                     subItem.state = (candidate.rows == grid.rows && candidate.cols == grid.cols) ? .on : .off
                 }
             }
         }
-    }
-
-    private var fancyZonesGlobalMode: ZoneMode {
-        if let raw = UserDefaults.standard.string(forKey: ZoneLayout.modeKey),
-           let mode = ZoneMode(rawValue: raw) {
-            return mode
-        }
-        return .auto
     }
 
     private var fancyZonesCurrentScreen: NSScreen {
@@ -744,15 +724,6 @@ extension AppDelegate {
         registerFancyZonesGridShortcut()
     }
 
-    @objc func toggleFancyZonesMode(_ sender: NSMenuItem) {
-        let next: ZoneMode = fancyZonesGlobalMode == .auto ? .manual : .auto
-        if next == .manual {
-            ZoneLayout.snapshotGridsForAllScreens()
-        }
-        UserDefaults.standard.set(next.rawValue, forKey: ZoneLayout.modeKey)
-        refreshFancyZonesMenuItems()
-    }
-
     @objc func selectFancyZonesGrid(_ sender: NSMenuItem) {
         let screenIndex = sender.tag / 100
         let candidateIndex = sender.tag % 100
@@ -768,17 +739,13 @@ extension AppDelegate {
         WindowAction.arrangeWindowsInZones.postMenu()
     }
 
-    /// Cycles the manual grid through ``ZoneLayout.candidates`` (1x2 → 2x2 → …).
-    /// Used by the optional grid-cycle shortcut, which has no default key.
+    /// Cycles the grid on the current screen through the cycle candidates
+    /// (every candidate by default, or only the n×n grids when the square-only
+    /// option is enabled). Used by the optional grid-cycle shortcut.
     func cycleFancyZonesGrid() {
-        if fancyZonesGlobalMode == .auto {
-            ZoneLayout.snapshotGridsForAllScreens()
-            UserDefaults.standard.set(ZoneMode.manual.rawValue, forKey: ZoneLayout.modeKey)
-        }
         let screen = fancyZonesCurrentScreen
-        let candidates = ZoneLayout.candidates
-        let current = ZoneLayout.grid(for: screen)
-        let currentIndex = candidates.firstIndex { $0.rows == current.rows && $0.cols == current.cols } ?? 0
+        let candidates = ZoneLayout.cycleCandidates()
+        let currentIndex = ZoneLayout.cycleIndex(for: screen)
         let next = candidates[(currentIndex + 1) % candidates.count]
         ZoneLayout.setManualGrid(rows: next.rows, cols: next.cols, for: screen)
         refreshFancyZonesMenuItems()

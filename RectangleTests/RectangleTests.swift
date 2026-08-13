@@ -3670,65 +3670,66 @@ class ZoneLayoutTests: XCTestCase {
         XCTAssertEqual(rect.height, expected.height, accuracy: 0.001, file: file, line: line)
     }
 
-    // MARK: - smartGrid(width:height:)
+    // MARK: - Cycle grid restriction
 
-    func testSmartGridOnFullHD() {
-        // 1920x1080: floor(1920/640)=3 cols, floor(1080/600)=1 row.
-        let grid = ZoneLayout.smartGrid(width: 1920, height: 1080)
-        XCTAssertEqual(grid.rows, 1)
-        XCTAssertEqual(grid.cols, 3)
+    private func setCycleSettings(only: Bool, max: Int) {
+        ZoneLayout.cycleSquareOnly = only
+        ZoneLayout.cycleSquareMax = max
     }
 
-    func testSmartGridOnWide1440p() {
-        // 2560x1440: 4 cols, 2 rows.
-        let grid = ZoneLayout.smartGrid(width: 2560, height: 1440)
-        XCTAssertEqual(grid.rows, 2)
-        XCTAssertEqual(grid.cols, 4)
+    private func resetCycleSettings() {
+        ZoneLayout.cycleSquareOnly = false
+        ZoneLayout.cycleSquareMax = 4
     }
 
-    func testSmartGridCapsAtMaxGridCount() {
-        // Very large screen would exceed 4, but is capped by maxGridCount.
-        let grid = ZoneLayout.smartGrid(width: 10000, height: 10000)
-        XCTAssertEqual(grid.rows, 4)
-        XCTAssertEqual(grid.cols, 4)
+    func testCycleCandidatesAllByDefault() {
+        // Square-only cycling is off by default: the shortcut covers every
+        // candidate grid.
+        defer { resetCycleSettings() }
+        setCycleSettings(only: false, max: 4)
+        let grids = ZoneLayout.cycleCandidates()
+        XCTAssertEqual(grids.count, ZoneLayout.candidates.count)
+        for (candidate, grid) in zip(ZoneLayout.candidates, grids) {
+            XCTAssertEqual(candidate.rows, grid.rows)
+            XCTAssertEqual(candidate.cols, grid.cols)
+        }
     }
 
-    func testSmartGridOnSmallScreen() {
-        // 1280x720: 2 cols, 1 row.
-        let grid = ZoneLayout.smartGrid(width: 1280, height: 720)
-        XCTAssertEqual(grid.rows, 1)
-        XCTAssertEqual(grid.cols, 2)
+    func testCycleCandidatesSquareOnly() {
+        // With the restriction on, only the square grids 2×2…4×4 remain.
+        defer { resetCycleSettings() }
+        setCycleSettings(only: true, max: 4)
+        let grids = ZoneLayout.cycleCandidates()
+        XCTAssertEqual(grids.map { $0.rows }, [2, 3, 4])
+        XCTAssertEqual(grids.map { $0.cols }, [2, 3, 4])
     }
 
-    func testSmartGridOnTinyScreen() {
-        // 800x300: height below minTileHeight gives a single row.
-        let grid = ZoneLayout.smartGrid(width: 800, height: 300)
-        XCTAssertEqual(grid.rows, 1)
-        XCTAssertEqual(grid.cols, 1)
+    func testCycleCandidatesSquareOnlyClampsMax() {
+        defer { resetCycleSettings() }
+        // Above the range clamps to 6, below clamps to 2.
+        setCycleSettings(only: true, max: 9)
+        XCTAssertEqual(ZoneLayout.cycleCandidates().map { $0.rows }, Array(2...6))
+        setCycleSettings(only: true, max: 1)
+        XCTAssertEqual(ZoneLayout.cycleCandidates().map { $0.rows }, [2])
     }
 
-    func testSmartGridOnPortraitScreen() {
-        // 800x2000: 1 col, 3 rows (floor(2000/600)=3).
-        let grid = ZoneLayout.smartGrid(width: 800, height: 2000)
-        XCTAssertEqual(grid.rows, 3)
-        XCTAssertEqual(grid.cols, 1)
+    func testCycleIndexMatchesSquareCurrentGrid() {
+        defer { resetCycleSettings() }
+        setCycleSettings(only: true, max: 4)
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 2, cols: 2), 0)
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 3, cols: 3), 1)
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 4, cols: 4), 2)
     }
 
-    func testSmartGridOnWideShortDisplay() {
-        // 2208x1145 (e.g. a scaled 27" display): 3 cols, 1 row — 2 rows would
-        // produce 572pt-tall tiles, which is too cramped for most apps.
-        let grid = ZoneLayout.smartGrid(width: 2208, height: 1145)
-        XCTAssertEqual(grid.rows, 1)
-        XCTAssertEqual(grid.cols, 3)
-    }
-
-    func testSmartGridDegenerateSize() {
-        XCTAssertEqual(ZoneLayout.smartGrid(width: 0, height: 0).rows, 1)
-        XCTAssertEqual(ZoneLayout.smartGrid(width: 0, height: 0).cols, 1)
-        XCTAssertEqual(ZoneLayout.smartGrid(width: -100, height: 1080).rows, 1)
-        XCTAssertEqual(ZoneLayout.smartGrid(width: -100, height: 1080).cols, 1)
-        XCTAssertEqual(ZoneLayout.smartGrid(width: 1920, height: -100).rows, 1)
-        XCTAssertEqual(ZoneLayout.smartGrid(width: 1920, height: -100).cols, 1)
+    func testCycleIndexFallsBackToNearestSquare() {
+        defer { resetCycleSettings() }
+        setCycleSettings(only: true, max: 4)
+        // 1×2 has 2 tiles: nearest square is 2×2 (4 tiles) → index 0.
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 1, cols: 2), 0)
+        // 3×4 has 12 tiles: 3×3 (9) is closer than 4×4 (16) → index 1.
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 3, cols: 4), 1)
+        // 1×4 has 4 tiles: exactly 2×2 → index 0.
+        XCTAssertEqual(ZoneLayout.cycleIndex(rows: 1, cols: 4), 0)
     }
 
     // MARK: - gridZones(rows:cols:in:)

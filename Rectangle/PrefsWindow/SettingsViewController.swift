@@ -41,6 +41,8 @@ class SettingsViewController: NSViewController {
 
     private var aboutTodoWindowController: NSWindowController?
     private var extraSettingsPopover: NSPopover?
+    private var zoneLayoutPopover: NSPopover?
+    private var zoneCycleSquareMaxPopUp: NSPopUpButton?
     private let shortcutRecordingObserver = ShortcutRecordingObserver()
     
     private var cycleSizeCheckboxes = [NSButton]()
@@ -1031,6 +1033,156 @@ class SettingsViewController: NSViewController {
             extraSettingsPopover = popover
         }
         extraSettingsPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
+    }
+
+    // MARK: - Zone layout settings popover
+
+    @IBAction func showZoneLayoutSettings(_ sender: NSButton) {
+        if zoneLayoutPopover == nil {
+            let popover = NSPopover()
+            popover.behavior = .transient
+            let viewController = NSViewController()
+
+            let mainStackView = NSStackView()
+            mainStackView.orientation = .vertical
+            mainStackView.alignment = .leading
+            mainStackView.spacing = 5
+            mainStackView.translatesAutoresizingMaskIntoConstraints = false
+
+            let headerLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.Section", tableName: "Main", value: "Zone Layout", comment: ""))
+            headerLabel.font = NSFont.boldSystemFont(ofSize: NSFont.systemFontSize)
+            headerLabel.alignment = .center
+            headerLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            var labels: [NSTextField] = []
+            var colorWells: [NSColorWell] = []
+            var rows: [NSStackView] = []
+
+            for (screenIndex, screen) in NSScreen.screens.enumerated() {
+                let screenLabel = NSTextField(labelWithString: screen.localizedName)
+                screenLabel.alignment = .right
+                screenLabel.translatesAutoresizingMaskIntoConstraints = false
+
+                let colorWell = NSColorWell()
+                colorWell.color = ZoneLayout.color(for: screen)
+                    ?? Defaults.footprintColor.typedValue?.nsColor
+                    ?? NSColor.black
+                colorWell.tag = screenIndex
+                colorWell.target = self
+                colorWell.action = #selector(zoneColorChanged(_:))
+                colorWell.translatesAutoresizingMaskIntoConstraints = false
+
+                let row = NSStackView()
+                row.orientation = .horizontal
+                row.alignment = .centerY
+                row.spacing = 18
+                row.addArrangedSubview(screenLabel)
+                row.addArrangedSubview(colorWell)
+
+                labels.append(screenLabel)
+                colorWells.append(colorWell)
+                rows.append(row)
+            }
+
+            let divider = NSBox()
+            divider.boxType = .separator
+            divider.translatesAutoresizingMaskIntoConstraints = false
+
+            let cycleSquareOnlyCheckbox = NSButton(checkboxWithTitle: NSLocalizedString("FancyZones.CycleSquareOnly", tableName: "Main", value: "Cycle the grid shortcut only through n×n grids", comment: ""), target: self, action: #selector(toggleZoneCycleSquareOnly(_:)))
+            cycleSquareOnlyCheckbox.state = ZoneLayout.cycleSquareOnly ? .on : .off
+            cycleSquareOnlyCheckbox.translatesAutoresizingMaskIntoConstraints = false
+            cycleSquareOnlyCheckbox.alignment = .left
+
+            let maxGridLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.CycleSquareMax", tableName: "Main", value: "Largest n×n grid", comment: ""))
+            maxGridLabel.alignment = .right
+            maxGridLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            let maxGridPopUp = NSPopUpButton()
+            for n in ZoneLayout.cycleSquareRange {
+                maxGridPopUp.addItem(withTitle: "\(n)×\(n)")
+            }
+            maxGridPopUp.selectItem(at: ZoneLayout.cycleSquareMax - ZoneLayout.cycleSquareRange.lowerBound)
+            maxGridPopUp.target = self
+            maxGridPopUp.action = #selector(setZoneCycleSquareMax(_:))
+            maxGridPopUp.isEnabled = ZoneLayout.cycleSquareOnly
+            maxGridPopUp.translatesAutoresizingMaskIntoConstraints = false
+            zoneCycleSquareMaxPopUp = maxGridPopUp
+
+            let maxGridRow = NSStackView()
+            maxGridRow.orientation = .horizontal
+            maxGridRow.alignment = .centerY
+            maxGridRow.spacing = 18
+            maxGridRow.addArrangedSubview(maxGridLabel)
+            maxGridRow.addArrangedSubview(maxGridPopUp)
+
+            let hintLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.CycleSquareHint", tableName: "Main", value: "When enabled, the Cycle Grid shortcut steps through 2×2 up to the chosen size.", comment: ""))
+            hintLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            hintLabel.textColor = .secondaryLabelColor
+            hintLabel.translatesAutoresizingMaskIntoConstraints = false
+
+            mainStackView.addArrangedSubview(headerLabel)
+            mainStackView.setCustomSpacing(8, after: headerLabel)
+            for row in rows {
+                mainStackView.addArrangedSubview(row)
+            }
+            mainStackView.addArrangedSubview(divider)
+            mainStackView.setCustomSpacing(8, after: divider)
+            mainStackView.addArrangedSubview(cycleSquareOnlyCheckbox)
+            mainStackView.addArrangedSubview(maxGridRow)
+            mainStackView.setCustomSpacing(8, after: maxGridRow)
+            mainStackView.addArrangedSubview(hintLabel)
+
+            var constraints: [NSLayoutConstraint] = [
+                headerLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor),
+                hintLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -20)
+            ]
+            if let firstLabel = labels.first {
+                for label in labels {
+                    constraints.append(label.widthAnchor.constraint(equalTo: firstLabel.widthAnchor))
+                }
+                constraints.append(firstLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 140))
+                constraints.append(maxGridLabel.widthAnchor.constraint(equalTo: firstLabel.widthAnchor))
+            }
+            for well in colorWells {
+                constraints.append(well.widthAnchor.constraint(equalToConstant: 44))
+                constraints.append(well.heightAnchor.constraint(equalToConstant: 23))
+                constraints.append(well.trailingAnchor.constraint(equalTo: maxGridPopUp.trailingAnchor))
+            }
+            constraints.append(maxGridPopUp.widthAnchor.constraint(equalToConstant: 120))
+            constraints.append(cycleSquareOnlyCheckbox.leadingAnchor.constraint(equalTo: maxGridPopUp.leadingAnchor))
+
+            NSLayoutConstraint.activate(constraints)
+
+            let containerView = NSView()
+            containerView.addSubview(mainStackView)
+
+            NSLayoutConstraint.activate([
+                mainStackView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 10),
+                mainStackView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -10),
+                mainStackView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 15),
+                mainStackView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -15)
+            ])
+
+            viewController.view = containerView
+            popover.contentViewController = viewController
+            zoneLayoutPopover = popover
+        }
+        zoneLayoutPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
+    }
+
+    @objc private func zoneColorChanged(_ sender: NSColorWell) {
+        let screens = NSScreen.screens
+        guard sender.tag >= 0, sender.tag < screens.count else { return }
+        ZoneLayout.setColor(sender.color, for: screens[sender.tag])
+    }
+
+    @objc private func toggleZoneCycleSquareOnly(_ sender: NSButton) {
+        ZoneLayout.cycleSquareOnly = sender.state == .on
+        zoneCycleSquareMaxPopUp?.isEnabled = sender.state == .on
+    }
+
+    @objc private func setZoneCycleSquareMax(_ sender: NSPopUpButton) {
+        ZoneLayout.cycleSquareMax = ZoneLayout.cycleSquareRange.lowerBound + sender.indexOfSelectedItem
     }
     
     override func awakeFromNib() {

@@ -285,14 +285,7 @@ Enable or disable the feature (disabled by default):
 defaults write com.knollsoft.Rectangle fancyZonesEnabled -bool true
 ```
 
-Choose the layout mode — `auto` (default) picks a grid based on the screen size, `manual` uses a fixed grid:
-
-```bash
-defaults write com.knollsoft.Rectangle fancyZonesMode -string auto
-defaults write com.knollsoft.Rectangle fancyZonesMode -string manual
-```
-
-In `manual` mode, set the grid with `fancyZonesRows` and `fancyZonesCols` (each 1–4, default 2×3):
+Set the grid with `fancyZonesRows` and `fancyZonesCols` (each 1–4, default 2×3):
 
 ```bash
 defaults write com.knollsoft.Rectangle fancyZonesRows -int 2
@@ -302,7 +295,20 @@ defaults write com.knollsoft.Rectangle fancyZonesCols -int 3
 Each setting can be overridden per monitor by appending the monitor's localized name, e.g.:
 
 ```bash
-defaults write com.knollsoft.Rectangle "fancyZonesMode_Built-in Retina Display" -string manual
+defaults write com.knollsoft.Rectangle "fancyZonesRows_Built-in Retina Display" -int 3
+```
+
+Give a specific display its own zone-preview color (falls back to the global footprint color when unset). The value is a JSON-encoded color, e.g.:
+
+```bash
+defaults write com.knollsoft.Rectangle "fancyZonesColor_Built-in Retina Display" -string '{"red":0.2,"green":0.45,"blue":0.95,"alpha":1.0}'
+```
+
+Optionally restrict the Cycle Grid shortcut to n×n grids only (instead of every candidate), and set the largest n (2–6, default 4):
+
+```bash
+defaults write com.knollsoft.Rectangle cycleSquareFancyZonesOnly -bool true
+defaults write com.knollsoft.Rectangle cycleSquareFancyZonesMax -int 4
 ```
 
 Arrange (tile) all windows on the current screen into the zones. The default shortcut is ⌃⌥A — change it in Rectangle's preferences under "Show More", or bind a custom key like the tiling commands above:

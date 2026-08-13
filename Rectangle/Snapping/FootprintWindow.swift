@@ -4,6 +4,7 @@ import Cocoa
 
 class FootprintWindow: NSWindow {
     private var orderOutCanceled = false
+    private var boxView: NSBox!
     
     init() {
         let initialRect = NSRect(x: 0, y: 0, width: 0, height: 0)
@@ -41,8 +42,16 @@ class FootprintWindow: NSWindow {
         }
         boxView.wantsLayer = true
         boxView.fillColor = Defaults.footprintColor.typedValue?.nsColor ?? NSColor.black
+        self.boxView = boxView
         
         contentView = boxView
+    }
+
+    /// Updates the preview fill color. Both the zone preview (Shift + drag) and
+    /// the edge-snap preview share this same box, so every preview resolves its
+    /// color through the same call and they always match.
+    func setFillColor(_ color: NSColor) {
+        boxView.fillColor = color
     }
     
     override var isVisible: Bool {
