@@ -104,6 +104,22 @@ enum ZoneLayout {
         return global > 0 ? global : 3
     }
 
+    // MARK: - Per-monitor writes
+
+    static func setManualGrid(rows: Int, cols: Int, for screen: NSScreen) {
+        UserDefaults.standard.set(rows, forKey: perMonitorKey(rowsKey, screen))
+        UserDefaults.standard.set(cols, forKey: perMonitorKey(colsKey, screen))
+    }
+
+    /// Snapshots every screen's current grid into its per-monitor keys, so
+    /// switching from auto to manual mode doesn't change any screen's layout.
+    static func snapshotGridsForAllScreens() {
+        for screen in NSScreen.screens {
+            let current = grid(for: screen)
+            setManualGrid(rows: current.rows, cols: current.cols, for: screen)
+        }
+    }
+
     /// Smart layout: the largest grid whose tiles stay at or above the minimum
     /// comfortable size, bounded by ``maxGridCount``. Pure and deterministic
     /// (no UserDefaults) so it can be unit-tested.

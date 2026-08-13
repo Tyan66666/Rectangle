@@ -30,17 +30,19 @@ class MultiWindowManager {
         }
     }
 
-    private static func allWindowsOnScreen(windowElement: AccessibilityElement? = nil, sortByPID: Bool = false, allWindows: Bool = false) -> (screens: UsableScreens, windows: [AccessibilityElement])? {
+    private static func allWindowsOnScreen(windowElement: AccessibilityElement? = nil, screen: NSScreen? = nil, sortByPID: Bool = false, allWindows: Bool = false) -> (screens: UsableScreens, windows: [AccessibilityElement])? {
         let screenDetection = ScreenDetection()
 
-        // Prefer the focused window's screen; fall back to the cursor's screen
-        // when no focused window is available (e.g. the user clicked the menu
-        // with nothing focused).
+        // Prefer the cursor's screen for global hotkeys: they don't change the
+        // focused app, so the cursor is the most reliable intent signal. Fall
+        // back to the focused window when the cursor can't be resolved.
         let screens: UsableScreens?
-        if let windowElement = windowElement ?? AccessibilityElement.getFrontWindowElement() {
+        if let screen {
+            screens = UsableScreens(currentScreen: screen, adjacentScreens: nil, numScreens: NSScreen.screens.count, screensOrdered: NSScreen.screens)
+        } else if let windowElement {
             screens = screenDetection.detectScreens(using: windowElement)
         } else {
-            screens = screenDetection.detectScreensAtCursor()
+            screens = screenDetection.detectScreensAtCursor() ?? screenDetection.detectScreens(using: AccessibilityElement.getFrontWindowElement())
         }
         guard let screens else {
             NSSound.beep()
@@ -50,29 +52,20 @@ class MultiWindowManager {
 
         let currentScreen = screens.currentScreen
 
-        var windows = AccessibilityElement.getAllWindowElements(all: allWindows)
+        var windows = AccessibilityElement.getAllWindowElements(all: allWindows, screen: currentScreen)
         if sortByPID {
             windows.sort(by: { (w1: AccessibilityElement, w2: AccessibilityElement) -> Bool in
                 w1.pid ?? pid_t(0) > w2.pid ?? pid_t(0)
             })
         }
 
+        let screensOrdered = screens.screensOrdered
         var actualWindows = [AccessibilityElement]()
         for w in windows {
             if Defaults.todo.userEnabled, TodoManager.isTodoWindow(w) { continue }
-            let screen = screenDetection.detectScreens(using: w)?.currentScreen
-            let isWin = w.isWindow == true
-            let isSheet = w.isSheet == true
-            let isMin = w.isMinimized == true
-            let isHid = w.isHidden == true
-            let isSysDlg = w.isSystemDialog == true
-            if screen == currentScreen,
-               isWin,
-               !isSheet,
-               !isMin,
-               !isHid,
-               !isSysDlg
-            {
+            let snap = w.windowFilterSnapshot
+            let onScreen = screenDetection.screenContaining(snap.frame, screens: screensOrdered) == currentScreen
+            if onScreen, snap.isWindow, !snap.isSheet, !snap.isMinimized, !snap.isHidden, !snap.isSystemDialog {
                 actualWindows.append(w)
             }
         }
@@ -99,9 +92,9 @@ class MultiWindowManager {
         }
     }
 
-    static func arrangeWindowsIntoZones(windowElement: AccessibilityElement? = nil) {
+    static func arrangeWindowsIntoZones(windowElement: AccessibilityElement? = nil, screen: NSScreen? = nil) {
         guard ZoneLayout.enabled else { return }
-        guard let (screens, windows) = allWindowsOnScreen(windowElement: windowElement, sortByPID: true, allWindows: true) else {
+        guard let (screens, windows) = allWindowsOnScreen(windowElement: windowElement, screen: screen, sortByPID: true, allWindows: true) else {
             return
         }
         let zones = ZoneLayout.zones(for: screens.currentScreen)

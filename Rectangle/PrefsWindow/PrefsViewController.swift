@@ -63,10 +63,11 @@ class PrefsViewController: NSViewController {
     
     @IBOutlet weak var showMoreButton: NSButton!
     @IBOutlet weak var additionalShortcutsStackView: NSStackView!
+    private var zoneLayoutRowsAdded = false
     
     // Settings
     override func awakeFromNib() {
-        
+
         actionsToViews = [
             .leftHalf: leftHalfShortcutView,
             .rightHalf: rightHalfShortcutView,
@@ -124,6 +125,63 @@ class PrefsViewController: NSViewController {
         subscribeToAllowAnyShortcutToggle()
         
         additionalShortcutsStackView.isHidden = true
+        addZoneLayoutShortcutRows()
+    }
+    
+    private func addZoneLayoutShortcutRows() {
+        guard !zoneLayoutRowsAdded else { return }
+        guard let column = additionalShortcutsStackView.arrangedSubviews.first as? NSStackView else { return }
+        zoneLayoutRowsAdded = true
+
+        let arrange = makeZoneShortcutRow(
+            label: NSLocalizedString("FancyZones.ArrangeShortcut", tableName: "Main", value: "Arrange Windows", comment: ""),
+            defaultsKey: WindowAction.arrangeWindowsInZones.name)
+        let gridCycle = makeZoneShortcutRow(
+            label: NSLocalizedString("FancyZones.CycleGrid", tableName: "Main", value: "Cycle Grid", comment: ""),
+            defaultsKey: ZoneLayout.gridCycleKey)
+
+        let divider = NSBox()
+        divider.boxType = .separator
+        divider.translatesAutoresizingMaskIntoConstraints = false
+
+        column.addArrangedSubview(divider)
+        column.addArrangedSubview(arrange.row)
+        column.addArrangedSubview(gridCycle.row)
+        divider.widthAnchor.constraint(equalTo: column.widthAnchor).isActive = true
+
+        shortcutRecordingObserver.observe([arrange.shortcutView, gridCycle.shortcutView])
+    }
+
+    /// Builds a row matching the storyboard layout exactly:
+    /// [right-aligned label][21×14 icon] 18pt [MASShortcutView 160×19].
+    private func makeZoneShortcutRow(label: String, defaultsKey: String) -> (row: NSStackView, shortcutView: MASShortcutView) {
+        let shortcutView = MASShortcutView(frame: NSRect(x: 0, y: 0, width: 160, height: 19))
+        shortcutView.translatesAutoresizingMaskIntoConstraints = false
+        shortcutView.widthAnchor.constraint(equalToConstant: 160).isActive = true
+        shortcutView.heightAnchor.constraint(equalToConstant: 19).isActive = true
+        shortcutView.shortcutValidator = PassthroughShortcutValidator()
+        shortcutView.setAssociatedUserDefaultsKey(defaultsKey, withTransformerName: MASDictionaryTransformerName)
+
+        let labelField = NSTextField(labelWithString: label)
+        labelField.alignment = .right
+
+        // Match the icon footprint of existing rows so the shortcut boxes and
+        // label text land on the same vertical guides.
+        let iconView = NSImageView(frame: NSRect(x: 0, y: 0, width: 21, height: 14))
+        iconView.translatesAutoresizingMaskIntoConstraints = false
+        iconView.widthAnchor.constraint(equalToConstant: 21).isActive = true
+        iconView.heightAnchor.constraint(equalToConstant: 14).isActive = true
+
+        let labelStack = NSStackView(views: [labelField, iconView])
+        labelStack.orientation = .horizontal
+        labelStack.alignment = .centerY
+
+        let row = NSStackView(views: [labelStack, shortcutView])
+        row.orientation = .horizontal
+        row.alignment = .centerY
+        row.spacing = 18
+
+        return (row, shortcutView)
     }
     
     @IBAction func toggleShowMore(_ sender: NSButton) {

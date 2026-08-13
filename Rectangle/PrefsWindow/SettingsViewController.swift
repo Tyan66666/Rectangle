@@ -27,7 +27,6 @@ class SettingsViewController: NSViewController {
     @IBOutlet weak var todoAppSidePopUpButton: NSPopUpButton!
     @IBOutlet weak var toggleTodoShortcutView: MASShortcutView!
     @IBOutlet weak var reflowTodoShortcutView: MASShortcutView!
-    @IBOutlet weak var zoneLayoutView: NSStackView!
     @IBOutlet weak var stageView: NSStackView!
     @IBOutlet weak var stageSlider: NSSlider!
     @IBOutlet weak var stageLabel: NSTextField!
@@ -1047,7 +1046,6 @@ class SettingsViewController: NSViewController {
         updateCheckForUpdatesTitle()
         
         initializeTodoModeSettings()
-        initializeZoneLayoutSettings()
         shortcutRecordingObserver.observe([toggleTodoShortcutView, reflowTodoShortcutView])
         
         cycleSizesView.arrangedSubviews.forEach { view in
@@ -1118,49 +1116,6 @@ class SettingsViewController: NSViewController {
         showHideTodoModeSettings(animated: false)
     }
 
-    func initializeZoneLayoutSettings() {
-        let arrangeShortcutView = MASShortcutView(frame: NSRect(x: 0, y: 0, width: 160, height: 19))
-        let gridCycleShortcutView = MASShortcutView(frame: NSRect(x: 0, y: 0, width: 160, height: 19))
-
-        let passthrough = PassthroughShortcutValidator()
-        arrangeShortcutView.shortcutValidator = passthrough
-        gridCycleShortcutView.shortcutValidator = passthrough
-
-        arrangeShortcutView.setAssociatedUserDefaultsKey(WindowAction.arrangeWindowsInZones.name, withTransformerName: MASDictionaryTransformerName)
-        gridCycleShortcutView.setAssociatedUserDefaultsKey(ZoneLayout.gridCycleKey, withTransformerName: MASDictionaryTransformerName)
-
-        let arrangeLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.ArrangeShortcut", tableName: "Main", value: "Arrange Windows", comment: ""))
-        arrangeLabel.alignment = .right
-        arrangeLabel.translatesAutoresizingMaskIntoConstraints = false
-        arrangeLabel.widthAnchor.constraint(equalToConstant: 140).isActive = true
-
-        let gridCycleLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.CycleGrid", tableName: "Main", value: "Cycle Grid", comment: ""))
-        gridCycleLabel.alignment = .right
-        gridCycleLabel.translatesAutoresizingMaskIntoConstraints = false
-        gridCycleLabel.widthAnchor.constraint(equalToConstant: 140).isActive = true
-
-        let arrangeRow = NSStackView()
-        arrangeRow.orientation = .horizontal
-        arrangeRow.alignment = .centerY
-        arrangeRow.spacing = 8
-        arrangeRow.addArrangedSubview(arrangeLabel)
-        arrangeRow.addArrangedSubview(arrangeShortcutView)
-
-        let gridCycleRow = NSStackView()
-        gridCycleRow.orientation = .horizontal
-        gridCycleRow.alignment = .centerY
-        gridCycleRow.spacing = 8
-        gridCycleRow.addArrangedSubview(gridCycleLabel)
-        gridCycleRow.addArrangedSubview(gridCycleShortcutView)
-
-        zoneLayoutView.orientation = .vertical
-        zoneLayoutView.alignment = .leading
-        zoneLayoutView.spacing = 8
-        zoneLayoutView.addArrangedSubview(arrangeRow)
-        zoneLayoutView.addArrangedSubview(gridCycleRow)
-
-        shortcutRecordingObserver.observe([arrangeShortcutView, gridCycleShortcutView])
-    }
     
     private func showHideTodoModeSettings(animated: Bool) {
         setVisibility(shown: Defaults.todo.userEnabled, ofView: todoView, withConstraint: todoViewHeightConstraint, animated: animated)

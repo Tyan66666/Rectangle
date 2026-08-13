@@ -95,7 +95,9 @@ class AccessibilityElement {
         set {
             guard let newValue = newValue else { return }
             wrappedElement.setValue(.position, newValue)
-            Logger.log("AX position proposed: \(newValue.debugDescription), result: \(position?.debugDescription ?? "N/A")")
+            if Logger.logging {
+                Logger.log("AX position proposed: \(newValue.debugDescription), result: \(position?.debugDescription ?? "N/A")")
+            }
         }
     }
     
@@ -114,7 +116,9 @@ class AccessibilityElement {
         set {
             guard let newValue = newValue else { return }
             wrappedElement.setValue(.size, newValue)
-            Logger.log("AX sizing proposed: \(newValue.debugDescription), result: \(size?.debugDescription ?? "N/A")")
+            if Logger.logging {
+                Logger.log("AX sizing proposed: \(newValue.debugDescription), result: \(size?.debugDescription ?? "N/A")")
+            }
         }
     }
 
@@ -126,6 +130,22 @@ class AccessibilityElement {
     var frame: CGRect {
         guard let position = position, let size = size else { return .null }
         return .init(origin: position, size: size)
+    }
+
+    /// Snapshot the attributes used for window filtering in a single pass,
+    /// avoiding repeated AX round-trips (role is otherwise fetched 4×).
+    var windowFilterSnapshot: (frame: CGRect, isWindow: Bool, isSheet: Bool, isMinimized: Bool, isHidden: Bool, isSystemDialog: Bool) {
+        let frame = self.frame
+        let role = (wrappedElement.getValue(.role) as? String).flatMap(NSAccessibility.Role.init(rawValue:))
+        let isWin = role == .window
+        let isSheet = role == .sheet
+        let isMin = (wrappedElement.getValue(.minimized) as? Bool) == true
+        var isHid = false
+        if let pid = pid {
+            isHid = (AccessibilityElement(pid).wrappedElement.getValue(.hidden) as? Bool) == true
+        }
+        let subrole = (wrappedElement.getValue(.subrole) as? String).flatMap(NSAccessibility.Subrole.init(rawValue:))
+        return (frame, isWin, isSheet, isMin, isHid, subrole == .systemDialog)
     }
     
     /// The Accessebility API only allows size & position adjustments individually.
@@ -439,7 +459,7 @@ extension AccessibilityElement {
     
     private static let excludedProcessNames: Set<String> = ["Dock", "WindowManager", "Notification Center"]
 
-    static func getAllWindowElements(all: Bool = false) -> [AccessibilityElement] {
+    static func getAllWindowElements(all: Bool = false, screen: NSScreen? = nil) -> [AccessibilityElement] {
         let windowInfos = WindowUtil.getWindowList(all: all)
             .filter { !excludedProcessNames.contains($0.processName ?? "") }
             .filter { $0.level < 21 }
@@ -467,22 +487,33 @@ extension AccessibilityElement {
         // Fallback for apps that expose no windows through the app element
         // (e.g. WeChat, Raycast): resolve each window by its on-screen position.
         var seenFrames: Set<String> = []
+        var candidates: [CGRect] = []
         for info in windowInfos where pidsWithoutAXWindows.contains(info.pid) {
             let frame = info.frame
             guard frame.width > 30, frame.height > 30 else { continue }
+            if let screen, !frame.screenFlipped.intersects(screen.frame) { continue }
             let key = "\(Int(frame.origin.x)),\(Int(frame.origin.y)),\(Int(frame.width)),\(Int(frame.height))"
             guard !seenFrames.contains(key) else { continue }
             seenFrames.insert(key)
+            candidates.append(frame)
+        }
 
-            if let element = AccessibilityElement(CGPoint(x: frame.midX, y: frame.midY))?.windowElement {
-                let eframe = element.frame
-                if abs(eframe.origin.x - frame.origin.x) < 10, abs(eframe.origin.y - frame.origin.y) < 10,
-                   abs(eframe.width - frame.width) < 10, abs(eframe.height - frame.height) < 10,
-                   !seenElements.contains(element) {
-                    seenElements.insert(element)
-                    result.append(element)
-                }
+        // Position lookups are independent AX round-trips; run them in parallel
+        // so one slow app can't stall the whole pass.
+        var resolved = [AccessibilityElement?](repeating: nil, count: candidates.count)
+        DispatchQueue.concurrentPerform(iterations: candidates.count) { index in
+            let frame = candidates[index]
+            guard let element = AccessibilityElement(CGPoint(x: frame.midX, y: frame.midY))?.windowElement else { return }
+            let eframe = element.frame
+            if abs(eframe.origin.x - frame.origin.x) < 10, abs(eframe.origin.y - frame.origin.y) < 10,
+               abs(eframe.width - frame.width) < 10, abs(eframe.height - frame.height) < 10 {
+                resolved[index] = element
             }
+        }
+
+        for element in resolved.compactMap({ $0 }) where !seenElements.contains(element) {
+            seenElements.insert(element)
+            result.append(element)
         }
         return result
     }
