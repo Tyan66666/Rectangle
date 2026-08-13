@@ -135,7 +135,8 @@ enum WindowAction: Int, Codable {
          displaySix = 125,
          displaySeven = 126,
          displayEight = 127,
-         displayNine = 128
+         displayNine = 128,
+         arrangeWindowsInZones = 129
 
     // Order matters here - it's used in the menu
     static let active = [leftHalf, rightHalf, centerHalf, topHalf, bottomHalf,
@@ -167,6 +168,7 @@ enum WindowAction: Int, Codable {
                          tileAll, cascadeAll,
                          leftTodo, rightTodo,
                          cascadeActiveApp, tileActiveApp,
+                         arrangeWindowsInZones,
                          displayOne, displayTwo, displayThree, displayFour, displayFive,
                          displaySix, displaySeven, displayEight, displayNine
     ]
@@ -328,6 +330,7 @@ enum WindowAction: Int, Codable {
         case .displaySeven: return "displaySeven"
         case .displayEight: return "displayEight"
         case .displayNine: return "displayNine"
+        case .arrangeWindowsInZones: return "arrangeWindowsInZones"
         }
     }
 
@@ -631,7 +634,7 @@ enum WindowAction: Int, Codable {
             key = "bottomRightSixteenth.title"
             value = "Bottom Right Sixteenth"
         case .displayOne, .displayTwo, .displayThree, .displayFour, .displayFive,
-             .displaySix, .displaySeven, .displayEight, .displayNine:
+             .displaySix, .displaySeven, .displayEight, .displayNine, .arrangeWindowsInZones:
             return nil
         }
 
@@ -663,7 +666,7 @@ enum WindowAction: Int, Codable {
     
     var isDragSnappable: Bool {
         switch self {
-        case .restore, .previousDisplay, .nextDisplay, .moveUp, .moveDown, .moveLeft, .moveRight, .specified, .reverseAll, .tileAll, .cascadeAll, .larger, .smaller, .largerWidth, .smallerWidth, .cascadeActiveApp, .tileActiveApp,
+        case .restore, .previousDisplay, .nextDisplay, .moveUp, .moveDown, .moveLeft, .moveRight, .specified, .reverseAll, .tileAll, .cascadeAll, .larger, .smaller, .largerWidth, .smallerWidth, .cascadeActiveApp, .tileActiveApp, .arrangeWindowsInZones,
             // Ninths
             .topLeftNinth, .topCenterNinth, .topRightNinth, .middleLeftNinth, .middleCenterNinth, .middleRightNinth, .bottomLeftNinth, .bottomCenterNinth, .bottomRightNinth,
             // Corner thirds
@@ -812,6 +815,7 @@ enum WindowAction: Int, Codable {
         case .rightTodo: return NSImage()
         case .cascadeActiveApp: return NSImage()
         case .tileActiveApp: return NSImage()
+        case .arrangeWindowsInZones: return NSImage()
         case .centerProminently: return NSImage()
         case .largerWidth: return NSImage(imageLiteralResourceName: "largerWidthTemplate")
         case .smallerWidth: return NSImage(imageLiteralResourceName: "smallerWidthTemplate")
@@ -903,7 +907,7 @@ enum WindowAction: Int, Codable {
             return Defaults.applyGapsToMaximize.userDisabled ? .none : .both;
         case .maximizeHeight:
             return Defaults.applyGapsToMaximizeHeight.userDisabled ? .none : .vertical;
-        case .almostMaximize, .previousDisplay, .nextDisplay, .larger, .smaller, .largerWidth, .smallerWidth, .largerHeight, .smallerHeight, .center, .centerProminently, .restore, .specified, .reverseAll, .tileAll, .cascadeAll, .cascadeActiveApp, .tileActiveApp,
+        case .almostMaximize, .previousDisplay, .nextDisplay, .larger, .smaller, .largerWidth, .smallerWidth, .largerHeight, .smallerHeight, .center, .centerProminently, .restore, .specified, .reverseAll, .tileAll, .cascadeAll, .cascadeActiveApp, .tileActiveApp, .arrangeWindowsInZones,
              .displayOne, .displayTwo, .displayThree, .displayFour, .displayFive,
              .displaySix, .displaySeven, .displayEight, .displayNine:
             return .none
@@ -922,7 +926,7 @@ enum WindowAction: Int, Codable {
              .moveLeft, .moveRight, .moveUp, .moveDown,
              .doubleHeightUp, .doubleHeightDown, .doubleWidthLeft, .doubleWidthRight,
              .halveHeightUp, .halveHeightDown, .halveWidthLeft, .halveWidthRight,
-             .reverseAll, .tileAll, .cascadeAll, .cascadeActiveApp, .tileActiveApp,
+             .reverseAll, .tileAll, .cascadeAll, .cascadeActiveApp, .tileActiveApp, .arrangeWindowsInZones,
              .leftTodo, .rightTodo,
              .specified:
             return false

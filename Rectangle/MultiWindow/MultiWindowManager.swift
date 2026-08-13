@@ -22,6 +22,9 @@ class MultiWindowManager {
         case .tileActiveApp:
             tileActiveAppWindowsOnScreen(windowElement: parameters.windowElement)
             return true
+        case .arrangeWindowsInZones:
+            arrangeWindowsIntoZones(windowElement: parameters.windowElement)
+            return true
         default:
             return false
         }
@@ -81,6 +84,24 @@ class MultiWindowManager {
             let column = ind % Int(columns)
             let row = ind / Int(columns)
             tileWindow(w, screenFrame: screenFrame, size: size, column: column, row: row)
+        }
+    }
+
+    static func arrangeWindowsIntoZones(windowElement: AccessibilityElement? = nil) {
+        guard let (screens, windows) = allWindowsOnScreen(windowElement: windowElement, sortByPID: true) else {
+            return
+        }
+        let zones = ZoneLayout.zones(for: screens.currentScreen)
+        guard !zones.isEmpty else {
+            return
+        }
+        let lastZone = zones[zones.count - 1]
+        for (ind, w) in windows.enumerated() {
+            let zone = ind < zones.count ? zones[ind] : lastZone
+            w.setFrame(zone.screenFlipped)
+        }
+        for w in windows.reversed() {
+            w.bringToFront()
         }
     }
 
