@@ -686,7 +686,8 @@ extension AppDelegate {
                 item.state = isAuto ? .on : .off
             case FancyZonesItem.grid.tag:
                 item.isHidden = !enabled || isAuto
-                item.title = "Grid: \(rows)×\(cols)"
+                let gridFormat = NSLocalizedString("FancyZones.Grid", tableName: "Main", value: "Grid: %1$d×%2$d", comment: "")
+                item.title = String(format: gridFormat, rows, cols)
             case FancyZonesItem.arrange.tag:
                 item.isHidden = !enabled
             case FancyZonesItem.separator.tag:

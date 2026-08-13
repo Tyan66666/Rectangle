@@ -18,6 +18,7 @@ The preferences window is purposefully slim, but there's a lot that can be modif
 - [Add additional "thirds" sizing commands](#add-additional-thirds-sizing-commands)
 - [Add doubling/halving window sizing commands](#add-doublinghalving-window-sizing-commands)
 - [Add additional tiling and cascading commands](#add-additional-tiling-and-cascading-commands)
+- [Zone Layout (FancyZones)](#zone-layout-fancyzones)
 - [Modify the "footprint" displayed for drag to snap area](#modify-the-footprint-displayed-for-drag-to-snap-area)
 - [Move Up/Down/Left/Right: Don't center on edge](#move-updownleftright-dont-center-on-edge)
 - [Make Smaller limits](#make-smaller-limits)
@@ -272,6 +273,42 @@ For example, the command for setting the cascadeActiveApp shortcut to `ctrl shif
 
 ```bash
 defaults write com.knollsoft.Rectangle cascadeActiveApp -dict-add keyCode -float 2 modifierFlags -float 393475
+```
+
+## Zone Layout (FancyZones)
+
+Rectangle can divide the visible screen area into a grid of zones, and either tile all windows into those zones on demand, or snap a window into the zone under the cursor while you drag with ⇧ Shift held.
+
+Enable or disable the feature (disabled by default):
+
+```bash
+defaults write com.knollsoft.Rectangle fancyZonesEnabled -bool true
+```
+
+Choose the layout mode — `auto` (default) picks a grid based on the screen size, `manual` uses a fixed grid:
+
+```bash
+defaults write com.knollsoft.Rectangle fancyZonesMode -string auto
+defaults write com.knollsoft.Rectangle fancyZonesMode -string manual
+```
+
+In `manual` mode, set the grid with `fancyZonesRows` and `fancyZonesCols` (each 1–4, default 2×3):
+
+```bash
+defaults write com.knollsoft.Rectangle fancyZonesRows -int 2
+defaults write com.knollsoft.Rectangle fancyZonesCols -int 3
+```
+
+Each setting can be overridden per monitor by appending the monitor's localized name, e.g.:
+
+```bash
+defaults write com.knollsoft.Rectangle "fancyZonesMode_Built-in Retina Display" -string manual
+```
+
+Tile all windows on the current screen into the zones (available from the menu bar under "Zone Layout", or bind a shortcut like the tiling commands above):
+
+```bash
+defaults write com.knollsoft.Rectangle arrangeWindowsInZones -dict-add keyCode -float 2 modifierFlags -float 393475
 ```
 
 ## Modify the "footprint" displayed for drag to snap area
