@@ -57,6 +57,10 @@ enum ZoneLayout {
         UserDefaults.standard.bool(forKey: enabledKey)
     }
 
+    /// Modifier held while dragging to activate zone snapping (instead of the
+    /// normal edge snapping). Shift is free of system window-drag meaning.
+    static let modifierFlags: NSEvent.ModifierFlags = [.shift]
+
     static func screenKey(_ screen: NSScreen) -> String {
         screen.localizedName
     }
@@ -145,6 +149,17 @@ enum ZoneLayout {
         let zones = zones(for: screen)
         for (index, zone) in zones.enumerated() where zone.contains(location) {
             return index
+        }
+        return nil
+    }
+
+    /// Screen, zone index, and zone rect (AppKit coords) containing `location`,
+    /// or nil when the cursor is outside every screen or between zones.
+    static func zone(at location: CGPoint) -> (screen: NSScreen, index: Int, rect: CGRect)? {
+        for screen in NSScreen.screens where screen.frame.contains(location) {
+            if let index = zoneIndex(at: location, for: screen) {
+                return (screen, index, zones(for: screen)[index])
+            }
         }
         return nil
     }

@@ -32,6 +32,8 @@ class SnappingManager {
     var dragRestrictionExpired: Bool { DispatchTime.now().uptimeMilliseconds > dragRestrictionExpirationTimestamp }
     
     var box: FootprintWindow?
+    var currentZoneScreen: NSScreen?
+    var currentZoneIndex: Int?
 
     let screenDetection = ScreenDetection()
     
@@ -191,6 +193,50 @@ class SnappingManager {
         }
         return true
     }
+
+    private func isZoneModifierPressed(_ event: NSEvent) -> Bool {
+        event.modifierFlags.contains(ZoneLayout.modifierFlags)
+    }
+
+    private func handleZoneDrag() {
+        if currentSnapArea != nil {
+            box?.orderOut(nil)
+            currentSnapArea = nil
+        }
+        guard let zone = ZoneLayout.zone(at: NSEvent.mouseLocation) else {
+            if currentZoneIndex != nil {
+                box?.orderOut(nil)
+                currentZoneScreen = nil
+                currentZoneIndex = nil
+            }
+            return
+        }
+        if zone.index == currentZoneIndex, zone.screen == currentZoneScreen {
+            return
+        }
+        if Defaults.hapticFeedbackOnSnap.userEnabled {
+            NSHapticFeedbackManager.defaultPerformer.perform(.alignment, performanceTime: .now)
+        }
+        if box == nil {
+            box = FootprintWindow()
+        }
+        box?.setFrame(zone.rect, display: true)
+        box?.orderFront(nil)
+        currentZoneScreen = zone.screen
+        currentZoneIndex = zone.index
+    }
+
+    private func snapWindowToZone(screen: NSScreen, index: Int) {
+        guard let windowElement else { return }
+        let zones = ZoneLayout.zones(for: screen)
+        guard index < zones.count else { return }
+        let zoneRect = zones[index]
+        if let windowId {
+            AppDelegate.windowHistory.restoreRects[windowId] = initialWindowRect
+            AppDelegate.windowHistory.lastRectangleActions.removeValue(forKey: windowId)
+        }
+        windowElement.setFrame(zoneRect.screenFlipped)
+    }
     
     func handle(event: NSEvent) {
         switch event.type {
@@ -201,7 +247,12 @@ class SnappingManager {
                 initialWindowRect = windowElement?.frame
             }
         case .leftMouseUp:
-            if let currentSnapArea = self.currentSnapArea {
+            if let zoneScreen = currentZoneScreen, let zoneIndex = currentZoneIndex {
+                box?.orderOut(nil)
+                snapWindowToZone(screen: zoneScreen, index: zoneIndex)
+                currentZoneScreen = nil
+                currentZoneIndex = nil
+            } else if let currentSnapArea = self.currentSnapArea {
                 box?.orderOut(nil)
                 currentSnapArea.action.postSnap(windowElement: windowElement, windowId: windowId, screen: currentSnapArea.screen)
                 self.currentSnapArea = nil
@@ -264,6 +315,15 @@ class SnappingManager {
                 }
             }
             if windowMoving {
+                if ZoneLayout.enabled, isZoneModifierPressed(event) {
+                    handleZoneDrag()
+                    return
+                }
+                if currentZoneIndex != nil {
+                    box?.orderOut(nil)
+                    currentZoneScreen = nil
+                    currentZoneIndex = nil
+                }
                 if !canSnap(event) {
                     if currentSnapArea != nil {
                         box?.orderOut(nil)
