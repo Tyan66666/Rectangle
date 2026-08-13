@@ -174,6 +174,15 @@ class AccessibilityElement {
             appElement.enhancedUserInterface = true
         }
     }
+
+    /// Set size and position directly, skipping enhanced-UI handling and app
+    /// resolution. Used by batch operations that toggle enhanced UI once per
+    /// app before the loop.
+    func setFrameDirect(_ frame: CGRect) {
+        size = frame.size
+        position = frame.origin
+        size = frame.size
+    }
     
     private var childElements: [AccessibilityElement]? {
         getElementsValue(.children)
@@ -459,10 +468,14 @@ extension AccessibilityElement {
     
     private static let excludedProcessNames: Set<String> = ["Dock", "WindowManager", "Notification Center"]
 
+    private static var windowElementCache: [CGWindowID: AccessibilityElement] = [:]
     static func getAllWindowElements(all: Bool = false, screen: NSScreen? = nil) -> [AccessibilityElement] {
-        let windowInfos = WindowUtil.getWindowList(all: all)
+        var windowInfos = WindowUtil.getWindowList(all: all)
             .filter { !excludedProcessNames.contains($0.processName ?? "") }
             .filter { $0.level < 21 }
+        if let screen {
+            windowInfos = windowInfos.filter { $0.frame.screenFlipped.intersects(screen.frame) }
+        }
 
         var result: [AccessibilityElement] = []
         var seenElements: Set<AccessibilityElement> = []
@@ -487,7 +500,7 @@ extension AccessibilityElement {
         // Fallback for apps that expose no windows through the app element
         // (e.g. WeChat, Raycast): resolve each window by its on-screen position.
         var seenFrames: Set<String> = []
-        var candidates: [CGRect] = []
+        var candidates: [(id: CGWindowID, pid: pid_t, frame: CGRect)] = []
         for info in windowInfos where pidsWithoutAXWindows.contains(info.pid) {
             let frame = info.frame
             guard frame.width > 30, frame.height > 30 else { continue }
@@ -495,15 +508,28 @@ extension AccessibilityElement {
             let key = "\(Int(frame.origin.x)),\(Int(frame.origin.y)),\(Int(frame.width)),\(Int(frame.height))"
             guard !seenFrames.contains(key) else { continue }
             seenFrames.insert(key)
-            candidates.append(frame)
+
+            // Fast path: reuse a previously resolved element for this CGWindowID.
+            if let cached = windowElementCache[info.id], !seenElements.contains(cached) {
+                seenElements.insert(cached)
+                result.append(cached)
+                continue
+            }
+            candidates.append((id: info.id, pid: info.pid, frame: frame))
         }
 
         // Position lookups are independent AX round-trips; run them in parallel
         // so one slow app can't stall the whole pass.
         var resolved = [AccessibilityElement?](repeating: nil, count: candidates.count)
         DispatchQueue.concurrentPerform(iterations: candidates.count) { index in
-            let frame = candidates[index]
-            guard let element = AccessibilityElement(CGPoint(x: frame.midX, y: frame.midY))?.windowElement else { return }
+            let frame = candidates[index].frame
+            let point = CGPoint(x: frame.midX, y: frame.midY)
+            // App-scoped hit-test is cheaper than system-wide when the pid is known.
+            var hit: AXUIElement? = AXUIElementCreateApplication(candidates[index].pid).getElementAtPosition(point)
+            if hit == nil {
+                hit = AXUIElement.systemWide.getElementAtPosition(point)
+            }
+            guard let hit, let element = AccessibilityElement(hit).windowElement else { return }
             let eframe = element.frame
             if abs(eframe.origin.x - frame.origin.x) < 10, abs(eframe.origin.y - frame.origin.y) < 10,
                abs(eframe.width - frame.width) < 10, abs(eframe.height - frame.height) < 10 {
@@ -511,9 +537,16 @@ extension AccessibilityElement {
             }
         }
 
-        for element in resolved.compactMap({ $0 }) where !seenElements.contains(element) {
-            seenElements.insert(element)
-            result.append(element)
+        for (index, element) in resolved.enumerated() {
+            guard let element else { continue }
+            windowElementCache[candidates[index].id] = element
+            if !seenElements.contains(element) {
+                seenElements.insert(element)
+                result.append(element)
+            }
+        }
+        if windowElementCache.count > 256 {
+            windowElementCache.removeAll()
         }
         return result
     }

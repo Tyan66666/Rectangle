@@ -102,12 +102,45 @@ class MultiWindowManager {
             return
         }
         let lastZone = zones[zones.count - 1]
+
+        // Toggle enhanced UI once per app (not per window): the per-window
+        // disable/enable is a system-preference round-trip that dominates the
+        // cost when arranging many windows of the same app.
+        var enhancedUIRestore: [AccessibilityElement] = []
+        var seenAppPids: Set<pid_t> = []
+        for w in windows {
+            guard let pid = w.pid, !seenAppPids.contains(pid) else { continue }
+            seenAppPids.insert(pid)
+            if w.enhancedUserInterface == true {
+                w.enhancedUserInterface = false
+                enhancedUIRestore.append(w)
+            }
+        }
+
         for (ind, w) in windows.enumerated() {
             let zone = ind < zones.count ? zones[ind] : lastZone
-            w.setFrame(zone.screenFlipped)
+            let target = zone.screenFlipped
+            // Skip the AX round-trip when the window is already in its zone.
+            let current = w.frame
+            if abs(current.origin.x - target.origin.x) > 1 || abs(current.origin.y - target.origin.y) > 1 ||
+               abs(current.width - target.width) > 1 || abs(current.height - target.height) > 1 {
+                // Enhanced UI is already toggled once per app above, so set the
+                // frame directly to skip setFrame's per-window app resolution.
+                w.setFrameDirect(target)
+            }
         }
-        for w in windows.reversed() {
-            w.bringToFront()
+
+        if Defaults.enhancedUI.value == .disableEnable {
+            for w in enhancedUIRestore {
+                w.enhancedUserInterface = true
+            }
+        }
+        // Only stacked (overflow) windows need z-ordering; the rest land in
+        // non-overlapping zones.
+        if windows.count > zones.count {
+            for w in windows[zones.count...].reversed() {
+                w.bringToFront()
+            }
         }
     }
 
