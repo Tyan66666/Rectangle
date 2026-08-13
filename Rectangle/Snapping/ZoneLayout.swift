@@ -37,6 +37,7 @@ enum ZoneLayout {
     static let modeKey = "fancyZonesMode"
     static let rowsKey = "fancyZonesRows"
     static let colsKey = "fancyZonesCols"
+    static let gridCycleKey = "cycleFancyZonesGrid"
 
     /// Manual layouts selectable from the status menu, as (rows, cols).
     static let candidates: [(rows: Int, cols: Int)] = [
@@ -46,7 +47,7 @@ enum ZoneLayout {
     /// Minimum comfortable tile size (points) used by the smart layout.
     /// Below these, most apps' content starts to feel cramped.
     static let minTileWidth: CGFloat = 640
-    static let minTileHeight: CGFloat = 400
+    static let minTileHeight: CGFloat = 600
 
     /// Upper bound on rows and columns for the smart layout (max 16 zones).
     static let maxGridCount = 4
@@ -108,7 +109,7 @@ enum ZoneLayout {
     /// (no UserDefaults) so it can be unit-tested.
     ///
     /// Derivation: `cols = clamp(floor(width / minTileWidth), 1, max)`. A tile
-    /// narrower than 640pt (or shorter than 400pt) is uncomfortable to use, so
+    /// narrower than 640pt (or shorter than 600pt) is uncomfortable to use, so
     /// we stop adding columns/rows once the next one would dip below that.
     static func smartGrid(width: CGFloat, height: CGFloat) -> (rows: Int, cols: Int) {
         guard width > 0, height > 0 else { return (1, 1) }

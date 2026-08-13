@@ -292,7 +292,19 @@ class AccessibilityElement {
     }
     
     var windowElements: [AccessibilityElement]? {
-        applicationElement?.getElementsValue(.windows)
+        guard let applicationElement else { return nil }
+        if let windows = applicationElement.getElementsValue(.windows), !windows.isEmpty {
+            return windows
+        }
+        // Some apps (e.g. Finder) don't expose kAXWindowsAttribute, but their
+        // windows are still reachable as direct children.
+        if let children = applicationElement.getElementsValue(.children) {
+            let windowChildren = children.filter { $0.isWindow == true }
+            if !windowChildren.isEmpty {
+                return windowChildren
+            }
+        }
+        return nil
     }
     
     var isHidden: Bool? {
@@ -427,12 +439,52 @@ extension AccessibilityElement {
     
     private static let excludedProcessNames: Set<String> = ["Dock", "WindowManager", "Notification Center"]
 
-    static func getAllWindowElements() -> [AccessibilityElement] {
-        return WindowUtil.getWindowList()
+    static func getAllWindowElements(all: Bool = false) -> [AccessibilityElement] {
+        let windowInfos = WindowUtil.getWindowList(all: all)
             .filter { !excludedProcessNames.contains($0.processName ?? "") }
-            .uniqueMap { $0.pid }
-            .compactMap { AccessibilityElement($0).windowElements }
-            .flatMap { $0 }
+            .filter { $0.level < 21 }
+
+        var result: [AccessibilityElement] = []
+        var seenElements: Set<AccessibilityElement> = []
+        var pidsWithoutAXWindows: Set<pid_t> = []
+        var seenPids: Set<pid_t> = []
+
+        for info in windowInfos {
+            let pid = info.pid
+            guard !seenPids.contains(pid) else { continue }
+            seenPids.insert(pid)
+
+            if let windows = AccessibilityElement(pid).windowElements {
+                for window in windows where !seenElements.contains(window) {
+                    seenElements.insert(window)
+                    result.append(window)
+                }
+            } else {
+                pidsWithoutAXWindows.insert(pid)
+            }
+        }
+
+        // Fallback for apps that expose no windows through the app element
+        // (e.g. WeChat, Raycast): resolve each window by its on-screen position.
+        var seenFrames: Set<String> = []
+        for info in windowInfos where pidsWithoutAXWindows.contains(info.pid) {
+            let frame = info.frame
+            guard frame.width > 30, frame.height > 30 else { continue }
+            let key = "\(Int(frame.origin.x)),\(Int(frame.origin.y)),\(Int(frame.width)),\(Int(frame.height))"
+            guard !seenFrames.contains(key) else { continue }
+            seenFrames.insert(key)
+
+            if let element = AccessibilityElement(CGPoint(x: frame.midX, y: frame.midY))?.windowElement {
+                let eframe = element.frame
+                if abs(eframe.origin.x - frame.origin.x) < 10, abs(eframe.origin.y - frame.origin.y) < 10,
+                   abs(eframe.width - frame.width) < 10, abs(eframe.height - frame.height) < 10,
+                   !seenElements.contains(element) {
+                    seenElements.insert(element)
+                    result.append(element)
+                }
+            }
+        }
+        return result
     }
 }
 

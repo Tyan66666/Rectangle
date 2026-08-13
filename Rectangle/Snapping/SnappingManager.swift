@@ -241,6 +241,10 @@ class SnappingManager {
     func handle(event: NSEvent) {
         switch event.type {
         case .leftMouseDown:
+            windowMoving = false
+            currentSnapArea = nil
+            currentZoneScreen = nil
+            currentZoneIndex = nil
             if !Defaults.obtainWindowOnClick.userDisabled {
                 windowElement = AccessibilityElement.getWindowElementUnderCursor()
                 windowId = windowElement?.getWindowId()
@@ -277,6 +281,9 @@ class SnappingManager {
                     }
                 }
             }
+            currentZoneScreen = nil
+            currentZoneIndex = nil
+            currentSnapArea = nil
             windowElement = nil
             windowId = nil
             windowMoving = false

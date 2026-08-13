@@ -18,6 +18,40 @@
         }
       }
     },
+    "FancyZones.ArrangeShortcut" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Arrange Windows"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "重排窗口"
+          }
+        }
+      }
+    },
+    "FancyZones.CycleGrid" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Cycle Grid"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "循环网格"
+          }
+        }
+      }
+    },
     "FancyZones.Grid" : {
       "extractionState" : "manual",
       "localizations" : {

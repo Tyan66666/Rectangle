@@ -698,6 +698,7 @@ enum WindowAction: Int, Codable {
         case .topLeft: return Shortcut( ctrl|cmd, kVK_LeftArrow )
         case .topRight: return Shortcut( ctrl|cmd, kVK_RightArrow )
         case .restore: return Shortcut( ctrl|alt, kVK_Delete)
+        case .arrangeWindowsInZones: return Shortcut( ctrl, kVK_ANSI_Z )
         default: return nil
         }
     }
@@ -732,6 +733,7 @@ enum WindowAction: Int, Codable {
                 return Shortcut( ctrl|alt, kVK_ANSI_R )
             }
             return nil
+        case .arrangeWindowsInZones: return Shortcut( ctrl, kVK_ANSI_Z )
         default: return nil
         }
     }

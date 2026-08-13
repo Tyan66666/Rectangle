@@ -3673,16 +3673,16 @@ class ZoneLayoutTests: XCTestCase {
     // MARK: - smartGrid(width:height:)
 
     func testSmartGridOnFullHD() {
-        // 1920x1080: floor(1920/640)=3 cols, floor(1080/400)=2 rows.
+        // 1920x1080: floor(1920/640)=3 cols, floor(1080/600)=1 row.
         let grid = ZoneLayout.smartGrid(width: 1920, height: 1080)
-        XCTAssertEqual(grid.rows, 2)
+        XCTAssertEqual(grid.rows, 1)
         XCTAssertEqual(grid.cols, 3)
     }
 
     func testSmartGridOnWide1440p() {
-        // 2560x1440: 4 cols, 3 rows.
+        // 2560x1440: 4 cols, 2 rows.
         let grid = ZoneLayout.smartGrid(width: 2560, height: 1440)
-        XCTAssertEqual(grid.rows, 3)
+        XCTAssertEqual(grid.rows, 2)
         XCTAssertEqual(grid.cols, 4)
     }
 
@@ -3708,10 +3708,18 @@ class ZoneLayoutTests: XCTestCase {
     }
 
     func testSmartGridOnPortraitScreen() {
-        // 800x2000: 1 col, rows capped at 4.
+        // 800x2000: 1 col, 3 rows (floor(2000/600)=3).
         let grid = ZoneLayout.smartGrid(width: 800, height: 2000)
-        XCTAssertEqual(grid.rows, 4)
+        XCTAssertEqual(grid.rows, 3)
         XCTAssertEqual(grid.cols, 1)
+    }
+
+    func testSmartGridOnWideShortDisplay() {
+        // 2208x1145 (e.g. a scaled 27" display): 3 cols, 1 row — 2 rows would
+        // produce 572pt-tall tiles, which is too cramped for most apps.
+        let grid = ZoneLayout.smartGrid(width: 2208, height: 1145)
+        XCTAssertEqual(grid.rows, 1)
+        XCTAssertEqual(grid.cols, 3)
     }
 
     func testSmartGridDegenerateSize() {

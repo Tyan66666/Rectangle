@@ -30,12 +30,19 @@ class MultiWindowManager {
         }
     }
 
-    private static func allWindowsOnScreen(windowElement: AccessibilityElement? = nil, sortByPID: Bool = false) -> (screens: UsableScreens, windows: [AccessibilityElement])? {
+    private static func allWindowsOnScreen(windowElement: AccessibilityElement? = nil, sortByPID: Bool = false, allWindows: Bool = false) -> (screens: UsableScreens, windows: [AccessibilityElement])? {
         let screenDetection = ScreenDetection()
 
-        guard let windowElement = windowElement ?? AccessibilityElement.getFrontWindowElement(),
-              let screens = screenDetection.detectScreens(using: windowElement)
-        else {
+        // Prefer the focused window's screen; fall back to the cursor's screen
+        // when no focused window is available (e.g. the user clicked the menu
+        // with nothing focused).
+        let screens: UsableScreens?
+        if let windowElement = windowElement ?? AccessibilityElement.getFrontWindowElement() {
+            screens = screenDetection.detectScreens(using: windowElement)
+        } else {
+            screens = screenDetection.detectScreensAtCursor()
+        }
+        guard let screens else {
             NSSound.beep()
             Logger.log("Can't detect screen for multiple windows")
             return nil
@@ -43,7 +50,7 @@ class MultiWindowManager {
 
         let currentScreen = screens.currentScreen
 
-        var windows = AccessibilityElement.getAllWindowElements()
+        var windows = AccessibilityElement.getAllWindowElements(all: allWindows)
         if sortByPID {
             windows.sort(by: { (w1: AccessibilityElement, w2: AccessibilityElement) -> Bool in
                 w1.pid ?? pid_t(0) > w2.pid ?? pid_t(0)
@@ -54,12 +61,17 @@ class MultiWindowManager {
         for w in windows {
             if Defaults.todo.userEnabled, TodoManager.isTodoWindow(w) { continue }
             let screen = screenDetection.detectScreens(using: w)?.currentScreen
+            let isWin = w.isWindow == true
+            let isSheet = w.isSheet == true
+            let isMin = w.isMinimized == true
+            let isHid = w.isHidden == true
+            let isSysDlg = w.isSystemDialog == true
             if screen == currentScreen,
-               w.isWindow == true,
-               w.isSheet != true,
-               w.isMinimized != true,
-               w.isHidden != true,
-               w.isSystemDialog != true
+               isWin,
+               !isSheet,
+               !isMin,
+               !isHid,
+               !isSysDlg
             {
                 actualWindows.append(w)
             }
@@ -88,7 +100,8 @@ class MultiWindowManager {
     }
 
     static func arrangeWindowsIntoZones(windowElement: AccessibilityElement? = nil) {
-        guard let (screens, windows) = allWindowsOnScreen(windowElement: windowElement, sortByPID: true) else {
+        guard ZoneLayout.enabled else { return }
+        guard let (screens, windows) = allWindowsOnScreen(windowElement: windowElement, sortByPID: true, allWindows: true) else {
             return
         }
         let zones = ZoneLayout.zones(for: screens.currentScreen)

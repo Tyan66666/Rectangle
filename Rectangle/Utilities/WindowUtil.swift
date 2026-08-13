@@ -3,10 +3,15 @@
 import Foundation
 
 class WindowUtil {
-    private static var windowListCache = TimeoutCache<[CGWindowID]?, [WindowInfo]>(timeout: 100)
+    private struct WindowListKey: Hashable {
+        let ids: [CGWindowID]?
+        let all: Bool
+    }
+
+    private static var windowListCache = TimeoutCache<WindowListKey, [WindowInfo]>(timeout: 100)
     
     static func getWindowList(ids: [CGWindowID]? = nil, all: Bool = false) -> [WindowInfo] {
-        if let infos = windowListCache[ids] {
+        if let infos = windowListCache[WindowListKey(ids: ids, all: all)] {
             return infos
         }
         var infos = [WindowInfo]()
@@ -44,7 +49,7 @@ class WindowUtil {
                 infos.append(info)
             }
         }
-        windowListCache[ids] = infos
+        windowListCache[WindowListKey(ids: ids, all: all)] = infos
         return infos
     }
 }

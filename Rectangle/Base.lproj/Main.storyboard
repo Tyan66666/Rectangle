@@ -3263,6 +3263,15 @@
                                                     <real value="3.4028234663852886e+38"/>
                                                 </customSpacing>
                                             </stackView>
+                                            <box verticalHuggingPriority="750" boxType="separator" translatesAutoresizingMaskIntoConstraints="NO" id="ZL-sep-001">
+                                                <rect key="frame" x="0.0" y="64" width="500" height="24"/>
+                                                <constraints>
+                                                    <constraint firstAttribute="height" constant="20" id="ZL-sep-h01"/>
+                                                </constraints>
+                                            </box>
+                                            <stackView distribution="fill" orientation="vertical" alignment="leading" spacing="8" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalClippingResistancePriority="999" translatesAutoresizingMaskIntoConstraints="NO" id="ZL-sec-001" userLabel="Zone Layout Shortcuts">
+                                                <rect key="frame" x="0.0" y="0.0" width="500" height="46"/>
+                                            </stackView>
                                             <stackView distribution="equalSpacing" orientation="horizontal" alignment="top" spacing="0.0" horizontalStackHuggingPriority="249.99998474121094" verticalStackHuggingPriority="249.99998474121094" verticalCompressionResistancePriority="1000" translatesAutoresizingMaskIntoConstraints="NO" id="OhI-U9-bZb">
                                                 <rect key="frame" x="0.0" y="0.0" width="500" height="24"/>
                                                 <subviews>
@@ -3446,6 +3455,7 @@
                         <outlet property="useCursorScreenDetectionCheckbox" destination="CUR-SD-CHK" id="cXm-7I-x0Q"/>
                         <outlet property="versionLabel" destination="Azi-Y9-9xa" id="P8e-ZA-J6X"/>
                         <outlet property="windowSnappingCheckbox" destination="3wO-pf-nsb" id="00K-AW-LYi"/>
+                        <outlet property="zoneLayoutView" destination="ZL-sec-001" id="ZL-out-zone"/>
                     </connections>
                 </viewController>
                 <customObject id="c9e-yT-Dp7" userLabel="First Responder" customClass="NSResponder" sceneMemberID="firstResponder"/>

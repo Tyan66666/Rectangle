@@ -3,6 +3,7 @@
 import Cocoa
 import Sparkle
 import ServiceManagement
+import MASShortcut
 import os.log
 
 @NSApplicationMain
@@ -158,6 +159,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         self.titleBarManager = TitleBarManager()
         self.greenButtonManager = GreenButtonManager()
         self.initializeTodo()
+        registerFancyZonesGridShortcut()
         checkForProblematicApps()
         MacTilingDefaults.checkForBuiltInTiling(skipIfAlreadyNotified: true)
     }
@@ -648,15 +650,18 @@ extension AppDelegate {
         mainStatusMenu.insertItem(modeItem, at: menuIndex)
         menuIndex += 1
 
-        let gridItem = NSMenuItem(title: "", action: #selector(cycleFancyZonesGrid), keyEquivalent: "")
+        let gridItem = NSMenuItem(title: "", action: nil, keyEquivalent: "")
         gridItem.tag = FancyZonesItem.grid.tag
         gridItem.target = self
         mainStatusMenu.insertItem(gridItem, at: menuIndex)
-        menuIndex += 1
-
-        let separator = NSMenuItem.separator()
-        separator.tag = FancyZonesItem.separator.tag
-        mainStatusMenu.insertItem(separator, at: menuIndex)
+        let gridMenu = NSMenu(title: "")
+        for (index, candidate) in ZoneLayout.candidates.enumerated() {
+            let item = NSMenuItem(title: "\(candidate.rows)×\(candidate.cols)", action: #selector(selectFancyZonesGrid(_:)), keyEquivalent: "")
+            item.target = self
+            item.tag = index
+            gridMenu.addItem(item)
+        }
+        mainStatusMenu.setSubmenu(gridMenu, for: gridItem)
         menuIndex += 1
 
         let arrangeTitle = NSLocalizedString("FancyZones.Arrange", tableName: "Main", value: "Arrange Windows in Zones", comment: "")
@@ -664,6 +669,11 @@ extension AppDelegate {
         arrangeItem.tag = FancyZonesItem.arrange.tag
         arrangeItem.target = self
         mainStatusMenu.insertItem(arrangeItem, at: menuIndex)
+        menuIndex += 1
+
+        let separator = NSMenuItem.separator()
+        separator.tag = FancyZonesItem.separator.tag
+        mainStatusMenu.insertItem(separator, at: menuIndex)
         menuIndex += 1
 
         refreshFancyZonesMenuItems()
@@ -688,10 +698,14 @@ extension AppDelegate {
                 item.isHidden = !enabled || isAuto
                 let gridFormat = NSLocalizedString("FancyZones.Grid", tableName: "Main", value: "Grid: %1$d×%2$d", comment: "")
                 item.title = String(format: gridFormat, rows, cols)
+                for subItem in item.submenu?.items ?? [] {
+                    let candidate = ZoneLayout.candidates[subItem.tag]
+                    subItem.state = (candidate.rows == rows && candidate.cols == cols) ? .on : .off
+                }
             case FancyZonesItem.arrange.tag:
                 item.isHidden = !enabled
             case FancyZonesItem.separator.tag:
-                item.isHidden = !enabled
+                item.isHidden = false
             default:
                 break
             }
@@ -720,6 +734,7 @@ extension AppDelegate {
         let enabled = sender.state == .off
         UserDefaults.standard.set(enabled, forKey: ZoneLayout.enabledKey)
         refreshFancyZonesMenuItems()
+        registerFancyZonesGridShortcut()
     }
 
     @objc func toggleFancyZonesMode(_ sender: NSMenuItem) {
@@ -728,7 +743,20 @@ extension AppDelegate {
         refreshFancyZonesMenuItems()
     }
 
-    @objc func cycleFancyZonesGrid(_ sender: NSMenuItem) {
+    @objc func selectFancyZonesGrid(_ sender: NSMenuItem) {
+        let candidate = ZoneLayout.candidates[sender.tag]
+        UserDefaults.standard.set(candidate.rows, forKey: ZoneLayout.rowsKey)
+        UserDefaults.standard.set(candidate.cols, forKey: ZoneLayout.colsKey)
+        refreshFancyZonesMenuItems()
+    }
+
+    @objc func arrangeWindowsInZones(_ sender: NSMenuItem) {
+        WindowAction.arrangeWindowsInZones.postMenu()
+    }
+
+    /// Cycles the manual grid through ``ZoneLayout.candidates`` (1x2 → 2x2 → …).
+    /// Used by the optional grid-cycle shortcut, which has no default key.
+    func cycleFancyZonesGrid() {
         let candidates = ZoneLayout.candidates
         let currentIndex = candidates.firstIndex { $0.rows == fancyZonesGlobalRows && $0.cols == fancyZonesGlobalCols } ?? 0
         let next = candidates[(currentIndex + 1) % candidates.count]
@@ -737,8 +765,15 @@ extension AppDelegate {
         refreshFancyZonesMenuItems()
     }
 
-    @objc func arrangeWindowsInZones(_ sender: NSMenuItem) {
-        WindowAction.arrangeWindowsInZones.postMenu()
+    /// Registers the optional grid-cycle shortcut (no default) while zone layout
+    /// is enabled, and releases it otherwise so the key stays free.
+    private func registerFancyZonesGridShortcut() {
+        MASShortcutBinder.shared()?.breakBinding(withDefaultsKey: ZoneLayout.gridCycleKey)
+        if ZoneLayout.enabled {
+            MASShortcutBinder.shared()?.bindShortcut(withDefaultsKey: ZoneLayout.gridCycleKey) { [weak self] in
+                self?.cycleFancyZonesGrid()
+            }
+        }
     }
 }
 

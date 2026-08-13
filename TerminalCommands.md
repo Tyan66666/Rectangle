@@ -305,10 +305,16 @@ Each setting can be overridden per monitor by appending the monitor's localized 
 defaults write com.knollsoft.Rectangle "fancyZonesMode_Built-in Retina Display" -string manual
 ```
 
-Tile all windows on the current screen into the zones (available from the menu bar under "Zone Layout", or bind a shortcut like the tiling commands above):
+Arrange (tile) all windows on the current screen into the zones. The default shortcut is ⌃⌥A — change it in Rectangle's preferences under "Show More", or bind a custom key like the tiling commands above:
 
 ```bash
 defaults write com.knollsoft.Rectangle arrangeWindowsInZones -dict-add keyCode -float 2 modifierFlags -float 393475
+```
+
+Cycle the manual grid from the keyboard (no default shortcut — bind one like this):
+
+```bash
+defaults write com.knollsoft.Rectangle cycleFancyZonesGrid -dict-add keyCode -float 1 modifierFlags -float 393475
 ```
 
 ## Modify the "footprint" displayed for drag to snap area
