@@ -32,14 +32,13 @@ enum ZoneLayout {
 
     /// Manual layouts selectable from the status menu, as (rows, cols).
     static let candidates: [(rows: Int, cols: Int)] = [
-        (1, 2), (2, 2), (1, 3), (2, 3), (1, 4), (2, 4), (3, 3), (3, 4)
+        (1, 2), (1, 3), (1, 4),
+        (2, 2), (2, 3), (2, 4),
+        (3, 1), (3, 2), (3, 3), (3, 4)
     ]
 
-    /// Range of n in the n×n grids offered by the cycle restriction.
-    static let cycleSquareRange = 2...6
-
-    /// Default selection for square-only cycling: 2×2, 3×3 and 4×4.
-    static let defaultCycleSquareGridMask = (1 << 2) | (1 << 3) | (1 << 4)
+    /// Default selection for restricted cycling: every candidate grid.
+    static let defaultCycleSquareGridMask = (1 << candidates.count) - 1
 
     // MARK: - Feature
 
@@ -84,57 +83,59 @@ enum ZoneLayout {
 
     // MARK: - Cycle grid restriction
 
-    /// When true, the Cycle Grid shortcut only cycles through the n×n grids
-    /// selected for the current display (instead of every candidate).
+    /// When true, the Cycle Grid shortcut only cycles through the grids
+    /// selected for the current display (instead of every candidate), and the
+    /// status-menu submenu for a display only shows those grids.
     static var cycleSquareOnly: Bool {
         get { Defaults.zoneCycleSquareOnly.enabled }
         set { Defaults.zoneCycleSquareOnly.enabled = newValue }
     }
 
-    /// Global default bitmask of enabled n×n grids (bit `n` = n×n participates),
-    /// used for displays without their own selection. Bits outside
-    /// ``cycleSquareRange`` are ignored.
-    static var cycleSquareGridMask: Int {
+    /// Global default bitmask of enabled candidate grids (bit `i` =
+    /// ``candidates``[i] participates), used for displays without their own
+    /// selection.
+    static var cycleGridMask: Int {
         get { Defaults.zoneCycleSquareGridMask.value }
         set { Defaults.zoneCycleSquareGridMask.value = newValue }
     }
 
     /// A display's selection: its own per-display mask when one has been set
     /// (via the Settings popover or `defaults write`), otherwise the global
-    /// ``cycleSquareGridMask``.
-    static func cycleSquareGridMask(for screen: NSScreen) -> Int {
+    /// ``cycleGridMask``.
+    static func cycleGridMask(for screen: NSScreen) -> Int {
         let key = perMonitorKey(cycleGridsKey, screen)
         if UserDefaults.standard.object(forKey: key) != nil {
             return UserDefaults.standard.integer(forKey: key)
         }
-        return cycleSquareGridMask
+        return cycleGridMask
     }
 
-    /// Stores a per-display n×n selection (bit `n` set means n×n participates).
-    static func setCycleSquareGridMask(_ mask: Int, for screen: NSScreen) {
+    /// Stores a per-display grid selection (bit `i` set means candidates[i]
+    /// participates).
+    static func setCycleGridMask(_ mask: Int, for screen: NSScreen) {
         UserDefaults.standard.set(mask, forKey: perMonitorKey(cycleGridsKey, screen))
     }
 
-    /// Grids the Cycle Grid shortcut steps through for `screen`: every candidate
-    /// by default, or exactly that display's checked n×n grids when the
-    /// square-only option is enabled.
+    /// Grids the Cycle Grid shortcut steps through for `screen` — and the grids
+    /// shown in that screen's status-menu submenu: every candidate by default,
+    /// or exactly the display's checked grids when restriction is enabled.
     static func cycleCandidates(for screen: NSScreen) -> [(rows: Int, cols: Int)] {
-        cycleCandidates(onlySquares: cycleSquareOnly, mask: cycleSquareGridMask(for: screen))
+        cycleCandidates(restricted: cycleSquareOnly, mask: cycleGridMask(for: screen))
     }
 
-    /// Pure: every candidate, or only the n×n grids enabled by `mask` (used by
-    /// the display-aware variant and by unit tests).
-    static func cycleCandidates(onlySquares: Bool, mask: Int) -> [(rows: Int, cols: Int)] {
-        guard onlySquares else { return candidates }
-        return cycleCandidates(mask: mask)
-    }
-
-    /// Pure: the n×n grids enabled by `mask`, in ascending order.
-    static func cycleCandidates(mask: Int) -> [(rows: Int, cols: Int)] {
-        cycleSquareRange.compactMap { n in
-            guard mask & (1 << n) != 0 else { return nil }
-            return (rows: n, cols: n)
+    /// Pure: every candidate, or only the candidates enabled by `mask` (bit `i`
+    /// = candidates[i]). Used by the display-aware variant and by unit tests.
+    static func cycleCandidates(restricted: Bool, mask: Int) -> [(rows: Int, cols: Int)] {
+        guard restricted else { return candidates }
+        return candidates.enumerated().compactMap { index, grid in
+            guard mask & (1 << index) != 0 else { return nil }
+            return grid
         }
+    }
+
+    /// Index of `grid` in ``candidates`` (used for menu tags), or nil.
+    static func candidateIndex(_ grid: (rows: Int, cols: Int)) -> Int? {
+        candidates.firstIndex { $0.rows == grid.rows && $0.cols == grid.cols }
     }
 
     /// Starting index within the display's cycle candidates for the current

@@ -692,15 +692,25 @@ extension AppDelegate {
                 }
             } else if item.tag >= FancyZonesItem.screenTagBase,
                       item.tag < FancyZonesItem.screenTagBase + screens.count {
-                let screen = screens[item.tag - FancyZonesItem.screenTagBase]
+                let screenIndex = item.tag - FancyZonesItem.screenTagBase
+                let screen = screens[screenIndex]
                 let grid = ZoneLayout.grid(for: screen)
                 item.isHidden = !enabled
                 item.title = "\(screen.localizedName): \(grid.rows)×\(grid.cols)"
-                for subItem in item.submenu?.items ?? [] {
-                    let candidate = ZoneLayout.candidates[subItem.tag % 100]
+                // Rebuild the submenu from the display's selected grids so the
+                // menu always mirrors the Settings → Zone Layout… checkboxes.
+                // The currently-selected grid gets a checkmark.
+                let submenu = NSMenu(title: "")
+                for candidate in ZoneLayout.cycleCandidates(for: screen) {
+                    guard let candidateIndex = ZoneLayout.candidateIndex(candidate) else { continue }
+                    let subItem = NSMenuItem(title: "\(candidate.rows)×\(candidate.cols)", action: #selector(selectFancyZonesGrid(_:)), keyEquivalent: "")
+                    subItem.target = self
+                    subItem.tag = screenIndex * 100 + candidateIndex
                     subItem.isEnabled = enabled
                     subItem.state = (candidate.rows == grid.rows && candidate.cols == grid.cols) ? .on : .off
+                    submenu.addItem(subItem)
                 }
+                item.submenu = submenu
             }
         }
     }

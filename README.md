@@ -12,7 +12,7 @@ Zone Layout arranges windows into a grid on the current display. It's disabled b
 
 - **One-key arrange** — bind a shortcut to **Arrange Windows in Zones** in the Keyboard Shortcuts tab (default ⌃Z). It moves every window on the current display into the grid. The display follows the focused window, falling back to the cursor.
 - **Shift + drag** — hold Shift while dragging a window to reveal the zone grid footprint; release to fill the zone under the cursor.
-- **Per-display grid** — each display can have its own grid size (2×2, 2×3, 3×3, …) chosen from the status-bar menu. The optional **Cycle Grid** shortcut steps through grid sizes for the current display only — in Settings → **Zone Layout…** it can be restricted to exactly the checked n×n grids (2×2 up to 6×6) — each display can have its own selection — instead of every size.
+- **Per-display grid** — each display can have its own grid size (2×2, 2×3, 3×3, …) chosen from the status-bar menu. The optional **Cycle Grid** shortcut steps through grid sizes for the current display only — in Settings → **Zone Layout…** it can be restricted to exactly the checked grids (1×2, 2×3, 3×3, …) — each display can have its own selection, mirrored in the status-bar menu with a checkmark on the current grid — instead of every size.
 - **Per-display colors** — give each display its own zone-preview color from Settings → **Zone Layout…**; displays without a custom color use the regular footprint color.
 - **Overflow** — extra windows beyond the grid stack in the last zone.
 
