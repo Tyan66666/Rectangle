@@ -745,6 +745,7 @@ extension AppDelegate {
     func cycleFancyZonesGrid() {
         let screen = fancyZonesCurrentScreen
         let candidates = ZoneLayout.cycleCandidates()
+        guard !candidates.isEmpty else { return }
         let currentIndex = ZoneLayout.cycleIndex(for: screen)
         let next = candidates[(currentIndex + 1) % candidates.count]
         ZoneLayout.setManualGrid(rows: next.rows, cols: next.cols, for: screen)

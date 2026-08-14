@@ -304,11 +304,13 @@ Give a specific display its own zone-preview color (falls back to the global foo
 defaults write com.knollsoft.Rectangle "fancyZonesColor_Built-in Retina Display" -string '{"red":0.2,"green":0.45,"blue":0.95,"alpha":1.0}'
 ```
 
-Optionally restrict the Cycle Grid shortcut to n×n grids only (instead of every candidate), and set the largest n (2–6, default 4):
+Optionally restrict the Cycle Grid shortcut to the checked n×n grids (instead of every candidate). `cycleSquareFancyZonesGrids` is a bitmask: bit n set means the n×n grid participates. The default 28 enables 2×2, 3×3 and 4×4 (bits 2, 3 and 4):
 
 ```bash
 defaults write com.knollsoft.Rectangle cycleSquareFancyZonesOnly -bool true
-defaults write com.knollsoft.Rectangle cycleSquareFancyZonesMax -int 4
+defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 28
+# e.g. only 3×3 and 5×5: 1<<3 | 1<<5 = 40
+defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 40
 ```
 
 Arrange (tile) all windows on the current screen into the zones. The default shortcut is ⌃⌥A — change it in Rectangle's preferences under "Show More", or bind a custom key like the tiling commands above:

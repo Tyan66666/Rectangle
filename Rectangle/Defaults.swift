@@ -91,7 +91,7 @@ class Defaults {
     static let enhancedUI = IntEnumDefault<EnhancedUI>(key: "enhancedUI", defaultValue: .disableEnable)
     static let footprintAnimationDurationMultiplier = FloatDefault(key: "footprintAnimationDurationMultiplier", defaultValue: 0)
     static let zoneCycleSquareOnly = BoolDefault(key: "cycleSquareFancyZonesOnly")
-    static let zoneCycleSquareMax = IntDefault(key: "cycleSquareFancyZonesMax", defaultValue: 4)
+    static let zoneCycleSquareGridMask = IntDefault(key: "cycleSquareFancyZonesGrids", defaultValue: 28)
     static let hapticFeedbackOnSnap = OptionalBoolDefault(key: "hapticFeedbackOnSnap")
     static let missionControlDraggingAllowedOffscreenDistance = FloatDefault(key: "missionControlDraggingAllowedOffscreenDistance", defaultValue: 25)
     static let missionControlDraggingDisallowedDuration = IntDefault(key: "missionControlDraggingDisallowedDuration", defaultValue: 250)
@@ -186,7 +186,7 @@ class Defaults {
         footprintAnimationDurationMultiplier,
         hapticFeedbackOnSnap,
         zoneCycleSquareOnly,
-        zoneCycleSquareMax,
+        zoneCycleSquareGridMask,
         missionControlDraggingAllowedOffscreenDistance,
         missionControlDraggingDisallowedDuration,
         doubleClickTitleBar,

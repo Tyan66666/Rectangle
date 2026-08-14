@@ -28,7 +28,6 @@ enum ZoneLayout {
     static let gridCycleKey = "cycleFancyZonesGrid"
     static let colorKey = "fancyZonesColor"
     static let cycleSquareOnlyKey = "cycleSquareFancyZonesOnly"
-    static let cycleSquareMaxKey = "cycleSquareFancyZonesMax"
 
     /// Manual layouts selectable from the status menu, as (rows, cols).
     static let candidates: [(rows: Int, cols: Int)] = [
@@ -37,6 +36,9 @@ enum ZoneLayout {
 
     /// Range of n in the n×n grids offered by the cycle restriction.
     static let cycleSquareRange = 2...6
+
+    /// Default selection for square-only cycling: 2×2, 3×3 and 4×4.
+    static let defaultCycleSquareGridMask = (1 << 2) | (1 << 3) | (1 << 4)
 
     // MARK: - Feature
 
@@ -82,23 +84,28 @@ enum ZoneLayout {
     // MARK: - Cycle grid restriction
 
     /// When true, the Cycle Grid shortcut only cycles through the n×n grids
-    /// from 2×2 up to ``cycleSquareMax`` (instead of every candidate).
+    /// selected in ``cycleSquareGridMask`` (instead of every candidate).
     static var cycleSquareOnly: Bool {
         get { Defaults.zoneCycleSquareOnly.enabled }
         set { Defaults.zoneCycleSquareOnly.enabled = newValue }
     }
 
-    /// Upper bound n for square-only cycling, clamped to ``cycleSquareRange``.
-    static var cycleSquareMax: Int {
-        get { min(max(Defaults.zoneCycleSquareMax.value, cycleSquareRange.lowerBound), cycleSquareRange.upperBound) }
-        set { Defaults.zoneCycleSquareMax.value = newValue }
+    /// Bitmask of enabled n×n grids for square-only cycling: bit `n` set means
+    /// the n×n grid participates. Bits outside ``cycleSquareRange`` are ignored.
+    static var cycleSquareGridMask: Int {
+        get { Defaults.zoneCycleSquareGridMask.value }
+        set { Defaults.zoneCycleSquareGridMask.value = newValue }
     }
 
     /// Grids the Cycle Grid shortcut steps through: every candidate by default,
-    /// or only the square grids 2×2…n×n when the square-only option is enabled.
+    /// or exactly the checked n×n grids when the square-only option is enabled.
     static func cycleCandidates() -> [(rows: Int, cols: Int)] {
         guard cycleSquareOnly else { return candidates }
-        return (cycleSquareRange.lowerBound...cycleSquareMax).map { (rows: $0, cols: $0) }
+        let mask = cycleSquareGridMask
+        return cycleSquareRange.compactMap { n in
+            guard mask & (1 << n) != 0 else { return nil }
+            return (rows: n, cols: n)
+        }
     }
 
     /// Starting index within the current cycle candidates for the current grid

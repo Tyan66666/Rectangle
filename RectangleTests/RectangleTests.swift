@@ -3672,21 +3672,25 @@ class ZoneLayoutTests: XCTestCase {
 
     // MARK: - Cycle grid restriction
 
-    private func setCycleSettings(only: Bool, max: Int) {
+    private func setCycleSettings(only: Bool, grids: [Int]) {
         ZoneLayout.cycleSquareOnly = only
-        ZoneLayout.cycleSquareMax = max
+        var mask = 0
+        for n in grids {
+            mask |= (1 << n)
+        }
+        ZoneLayout.cycleSquareGridMask = mask
     }
 
     private func resetCycleSettings() {
         ZoneLayout.cycleSquareOnly = false
-        ZoneLayout.cycleSquareMax = 4
+        ZoneLayout.cycleSquareGridMask = ZoneLayout.defaultCycleSquareGridMask
     }
 
     func testCycleCandidatesAllByDefault() {
         // Square-only cycling is off by default: the shortcut covers every
         // candidate grid.
         defer { resetCycleSettings() }
-        setCycleSettings(only: false, max: 4)
+        setCycleSettings(only: false, grids: [2, 3, 4])
         let grids = ZoneLayout.cycleCandidates()
         XCTAssertEqual(grids.count, ZoneLayout.candidates.count)
         for (candidate, grid) in zip(ZoneLayout.candidates, grids) {
@@ -3696,26 +3700,41 @@ class ZoneLayoutTests: XCTestCase {
     }
 
     func testCycleCandidatesSquareOnly() {
-        // With the restriction on, only the square grids 2×2…4×4 remain.
+        // With the restriction on, only the checked square grids remain.
         defer { resetCycleSettings() }
-        setCycleSettings(only: true, max: 4)
+        setCycleSettings(only: true, grids: [2, 3, 4])
         let grids = ZoneLayout.cycleCandidates()
         XCTAssertEqual(grids.map { $0.rows }, [2, 3, 4])
         XCTAssertEqual(grids.map { $0.cols }, [2, 3, 4])
     }
 
-    func testCycleCandidatesSquareOnlyClampsMax() {
+    func testCycleCandidatesCustomSelection() {
+        // Any subset of sizes can be selected; they cycle in ascending order.
         defer { resetCycleSettings() }
-        // Above the range clamps to 6, below clamps to 2.
-        setCycleSettings(only: true, max: 9)
-        XCTAssertEqual(ZoneLayout.cycleCandidates().map { $0.rows }, Array(2...6))
-        setCycleSettings(only: true, max: 1)
-        XCTAssertEqual(ZoneLayout.cycleCandidates().map { $0.rows }, [2])
+        setCycleSettings(only: true, grids: [3, 5])
+        let grids = ZoneLayout.cycleCandidates()
+        XCTAssertEqual(grids.map { $0.rows }, [3, 5])
+        XCTAssertEqual(grids.map { $0.cols }, [3, 5])
+    }
+
+    func testCycleCandidatesEmptySelection() {
+        // No checked sizes → nothing to cycle (the caller guards against this).
+        defer { resetCycleSettings() }
+        setCycleSettings(only: true, grids: [])
+        XCTAssertTrue(ZoneLayout.cycleCandidates().isEmpty)
+    }
+
+    func testCycleCandidatesIgnoresOutOfRangeBits() {
+        // Bits outside 2...6 (e.g. a stale 7×7 or 1×1) are ignored.
+        defer { resetCycleSettings() }
+        setCycleSettings(only: true, grids: [3, 4, 7])
+        let grids = ZoneLayout.cycleCandidates()
+        XCTAssertEqual(grids.map { $0.rows }, [3, 4])
     }
 
     func testCycleIndexMatchesSquareCurrentGrid() {
         defer { resetCycleSettings() }
-        setCycleSettings(only: true, max: 4)
+        setCycleSettings(only: true, grids: [2, 3, 4])
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 2, cols: 2), 0)
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 3, cols: 3), 1)
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 4, cols: 4), 2)
@@ -3723,7 +3742,7 @@ class ZoneLayoutTests: XCTestCase {
 
     func testCycleIndexFallsBackToNearestSquare() {
         defer { resetCycleSettings() }
-        setCycleSettings(only: true, max: 4)
+        setCycleSettings(only: true, grids: [2, 3, 4])
         // 1×2 has 2 tiles: nearest square is 2×2 (4 tiles) → index 0.
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 1, cols: 2), 0)
         // 3×4 has 12 tiles: 3×3 (9) is closer than 4×4 (16) → index 1.
