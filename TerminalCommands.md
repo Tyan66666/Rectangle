@@ -311,6 +311,11 @@ defaults write com.knollsoft.Rectangle cycleSquareFancyZonesOnly -bool true
 defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 28
 # e.g. only 3×3 and 5×5: 1<<3 | 1<<5 = 40
 defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 40
+
+Each display can have its own selection by appending the monitor's localized name, e.g.:
+
+```bash
+defaults write com.knollsoft.Rectangle "cycleSquareFancyZonesGrids_Built-in Retina Display" -int 40
 ```
 
 Arrange (tile) all windows on the current screen into the zones. The default shortcut is ⌃⌥A — change it in Rectangle's preferences under "Show More", or bind a custom key like the tiling commands above:

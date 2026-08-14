@@ -744,7 +744,7 @@ extension AppDelegate {
     /// option is enabled). Used by the optional grid-cycle shortcut.
     func cycleFancyZonesGrid() {
         let screen = fancyZonesCurrentScreen
-        let candidates = ZoneLayout.cycleCandidates()
+        let candidates = ZoneLayout.cycleCandidates(for: screen)
         guard !candidates.isEmpty else { return }
         let currentIndex = ZoneLayout.cycleIndex(for: screen)
         let next = candidates[(currentIndex + 1) % candidates.count]

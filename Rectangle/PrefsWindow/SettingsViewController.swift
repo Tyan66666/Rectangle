@@ -1038,6 +1038,9 @@ class SettingsViewController: NSViewController {
     // MARK: - Zone layout settings popover
 
     @IBAction func showZoneLayoutSettings(_ sender: NSButton) {
+        // Rebuild on every click so the display list and per-display settings
+        // stay fresh (screens may have changed since the last open).
+        zoneLayoutPopover = nil
         if zoneLayoutPopover == nil {
             let popover = NSPopover()
             popover.behavior = .transient
@@ -1057,7 +1060,11 @@ class SettingsViewController: NSViewController {
             var labels: [NSTextField] = []
             var colorWells: [NSColorWell] = []
             var rows: [NSStackView] = []
+            var gridCheckboxes: [NSButton] = []
 
+            // One row per display: its color well and its own set of n×n grid
+            // checkboxes. The Cycle Grid shortcut steps through exactly the
+            // checked sizes for the display the shortcut runs on.
             for (screenIndex, screen) in NSScreen.screens.enumerated() {
                 let screenLabel = NSTextField(labelWithString: screen.localizedName)
                 screenLabel.alignment = .right
@@ -1072,17 +1079,34 @@ class SettingsViewController: NSViewController {
                 colorWell.action = #selector(zoneColorChanged(_:))
                 colorWell.translatesAutoresizingMaskIntoConstraints = false
 
+                let gridSubStack = NSStackView()
+                gridSubStack.orientation = .horizontal
+                gridSubStack.alignment = .centerY
+                gridSubStack.spacing = 8
+                let mask = ZoneLayout.cycleSquareGridMask(for: screen)
+                for n in ZoneLayout.cycleSquareRange {
+                    let checkbox = NSButton(checkboxWithTitle: "\(n)×\(n)", target: self, action: #selector(toggleZoneCycleSquareGrid(_:)))
+                    checkbox.tag = screenIndex * 100 + n
+                    checkbox.state = mask & (1 << n) != 0 ? .on : .off
+                    checkbox.isEnabled = ZoneLayout.cycleSquareOnly
+                    checkbox.translatesAutoresizingMaskIntoConstraints = false
+                    gridSubStack.addArrangedSubview(checkbox)
+                    gridCheckboxes.append(checkbox)
+                }
+
                 let row = NSStackView()
                 row.orientation = .horizontal
                 row.alignment = .centerY
                 row.spacing = 18
                 row.addArrangedSubview(screenLabel)
                 row.addArrangedSubview(colorWell)
+                row.addArrangedSubview(gridSubStack)
 
                 labels.append(screenLabel)
                 colorWells.append(colorWell)
                 rows.append(row)
             }
+            zoneCycleSquareGridCheckboxes = gridCheckboxes
 
             let divider = NSBox()
             divider.boxType = .separator
@@ -1093,26 +1117,7 @@ class SettingsViewController: NSViewController {
             cycleSquareOnlyCheckbox.translatesAutoresizingMaskIntoConstraints = false
             cycleSquareOnlyCheckbox.alignment = .left
 
-            // One checkbox per n×n grid; the Cycle Grid shortcut steps through
-            // exactly the checked sizes (in ascending order) when square-only
-            // cycling is enabled.
-            let gridsRow = NSStackView()
-            gridsRow.orientation = .horizontal
-            gridsRow.alignment = .centerY
-            gridsRow.spacing = 8
-            var gridCheckboxes: [NSButton] = []
-            for n in ZoneLayout.cycleSquareRange {
-                let checkbox = NSButton(checkboxWithTitle: "\(n)×\(n)", target: self, action: #selector(toggleZoneCycleSquareGrid(_:)))
-                checkbox.tag = n
-                checkbox.state = ZoneLayout.cycleSquareGridMask & (1 << n) != 0 ? .on : .off
-                checkbox.isEnabled = ZoneLayout.cycleSquareOnly
-                checkbox.translatesAutoresizingMaskIntoConstraints = false
-                gridsRow.addArrangedSubview(checkbox)
-                gridCheckboxes.append(checkbox)
-            }
-            zoneCycleSquareGridCheckboxes = gridCheckboxes
-
-            let hintLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.CycleSquareHint", tableName: "Main", value: "When enabled, the Cycle Grid shortcut steps through the checked n×n grids.", comment: ""))
+            let hintLabel = NSTextField(labelWithString: NSLocalizedString("FancyZones.CycleSquareHint", tableName: "Main", value: "When enabled, the Cycle Grid shortcut steps through the n×n grids checked for the display it runs on.", comment: ""))
             hintLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
             hintLabel.textColor = .secondaryLabelColor
             hintLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -1125,8 +1130,7 @@ class SettingsViewController: NSViewController {
             mainStackView.addArrangedSubview(divider)
             mainStackView.setCustomSpacing(8, after: divider)
             mainStackView.addArrangedSubview(cycleSquareOnlyCheckbox)
-            mainStackView.addArrangedSubview(gridsRow)
-            mainStackView.setCustomSpacing(8, after: gridsRow)
+            mainStackView.setCustomSpacing(8, after: cycleSquareOnlyCheckbox)
             mainStackView.addArrangedSubview(hintLabel)
 
             var constraints: [NSLayoutConstraint] = [
@@ -1143,7 +1147,6 @@ class SettingsViewController: NSViewController {
                 constraints.append(well.widthAnchor.constraint(equalToConstant: 44))
                 constraints.append(well.heightAnchor.constraint(equalToConstant: 23))
             }
-            constraints.append(gridsRow.leadingAnchor.constraint(equalTo: cycleSquareOnlyCheckbox.leadingAnchor))
 
             NSLayoutConstraint.activate(constraints)
 
@@ -1173,27 +1176,36 @@ class SettingsViewController: NSViewController {
     @objc private func toggleZoneCycleSquareOnly(_ sender: NSButton) {
         let on = sender.state == .on
         ZoneLayout.cycleSquareOnly = on
-        // Turning square-only cycling on with nothing checked enables the
-        // default 2×2, 3×3, 4×4 set so the shortcut always has something to
-        // cycle through.
+        // Turning square-only cycling on with no global fallback selection
+        // enables the default 2×2, 3×3, 4×4 set so the shortcut always has
+        // something to cycle through.
         if on && ZoneLayout.cycleSquareGridMask == 0 {
             ZoneLayout.cycleSquareGridMask = ZoneLayout.defaultCycleSquareGridMask
         }
+        let screens = NSScreen.screens
         for checkbox in zoneCycleSquareGridCheckboxes {
             checkbox.isEnabled = on
-            checkbox.state = ZoneLayout.cycleSquareGridMask & (1 << checkbox.tag) != 0 ? .on : .off
+            let screenIndex = checkbox.tag / 100
+            let n = checkbox.tag % 100
+            guard screenIndex < screens.count else { continue }
+            let mask = ZoneLayout.cycleSquareGridMask(for: screens[screenIndex])
+            checkbox.state = mask & (1 << n) != 0 ? .on : .off
         }
     }
 
     @objc private func toggleZoneCycleSquareGrid(_ sender: NSButton) {
-        let n = sender.tag
-        var mask = ZoneLayout.cycleSquareGridMask
+        let screens = NSScreen.screens
+        let screenIndex = sender.tag / 100
+        let n = sender.tag % 100
+        guard screenIndex < screens.count else { return }
+        let screen = screens[screenIndex]
+        var mask = ZoneLayout.cycleSquareGridMask(for: screen)
         if sender.state == .on {
             mask |= (1 << n)
         } else {
             mask &= ~(1 << n)
         }
-        ZoneLayout.cycleSquareGridMask = mask
+        ZoneLayout.setCycleSquareGridMask(mask, for: screen)
     }
     
     override func awakeFromNib() {

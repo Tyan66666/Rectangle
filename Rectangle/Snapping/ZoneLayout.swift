@@ -28,6 +28,7 @@ enum ZoneLayout {
     static let gridCycleKey = "cycleFancyZonesGrid"
     static let colorKey = "fancyZonesColor"
     static let cycleSquareOnlyKey = "cycleSquareFancyZonesOnly"
+    static let cycleGridsKey = "cycleSquareFancyZonesGrids"
 
     /// Manual layouts selectable from the status menu, as (rows, cols).
     static let candidates: [(rows: Int, cols: Int)] = [
@@ -84,45 +85,73 @@ enum ZoneLayout {
     // MARK: - Cycle grid restriction
 
     /// When true, the Cycle Grid shortcut only cycles through the n×n grids
-    /// selected in ``cycleSquareGridMask`` (instead of every candidate).
+    /// selected for the current display (instead of every candidate).
     static var cycleSquareOnly: Bool {
         get { Defaults.zoneCycleSquareOnly.enabled }
         set { Defaults.zoneCycleSquareOnly.enabled = newValue }
     }
 
-    /// Bitmask of enabled n×n grids for square-only cycling: bit `n` set means
-    /// the n×n grid participates. Bits outside ``cycleSquareRange`` are ignored.
+    /// Global default bitmask of enabled n×n grids (bit `n` = n×n participates),
+    /// used for displays without their own selection. Bits outside
+    /// ``cycleSquareRange`` are ignored.
     static var cycleSquareGridMask: Int {
         get { Defaults.zoneCycleSquareGridMask.value }
         set { Defaults.zoneCycleSquareGridMask.value = newValue }
     }
 
-    /// Grids the Cycle Grid shortcut steps through: every candidate by default,
-    /// or exactly the checked n×n grids when the square-only option is enabled.
-    static func cycleCandidates() -> [(rows: Int, cols: Int)] {
-        guard cycleSquareOnly else { return candidates }
-        let mask = cycleSquareGridMask
-        return cycleSquareRange.compactMap { n in
+    /// A display's selection: its own per-display mask when one has been set
+    /// (via the Settings popover or `defaults write`), otherwise the global
+    /// ``cycleSquareGridMask``.
+    static func cycleSquareGridMask(for screen: NSScreen) -> Int {
+        let key = perMonitorKey(cycleGridsKey, screen)
+        if UserDefaults.standard.object(forKey: key) != nil {
+            return UserDefaults.standard.integer(forKey: key)
+        }
+        return cycleSquareGridMask
+    }
+
+    /// Stores a per-display n×n selection (bit `n` set means n×n participates).
+    static func setCycleSquareGridMask(_ mask: Int, for screen: NSScreen) {
+        UserDefaults.standard.set(mask, forKey: perMonitorKey(cycleGridsKey, screen))
+    }
+
+    /// Grids the Cycle Grid shortcut steps through for `screen`: every candidate
+    /// by default, or exactly that display's checked n×n grids when the
+    /// square-only option is enabled.
+    static func cycleCandidates(for screen: NSScreen) -> [(rows: Int, cols: Int)] {
+        cycleCandidates(onlySquares: cycleSquareOnly, mask: cycleSquareGridMask(for: screen))
+    }
+
+    /// Pure: every candidate, or only the n×n grids enabled by `mask` (used by
+    /// the display-aware variant and by unit tests).
+    static func cycleCandidates(onlySquares: Bool, mask: Int) -> [(rows: Int, cols: Int)] {
+        guard onlySquares else { return candidates }
+        return cycleCandidates(mask: mask)
+    }
+
+    /// Pure: the n×n grids enabled by `mask`, in ascending order.
+    static func cycleCandidates(mask: Int) -> [(rows: Int, cols: Int)] {
+        cycleSquareRange.compactMap { n in
             guard mask & (1 << n) != 0 else { return nil }
             return (rows: n, cols: n)
         }
     }
 
-    /// Starting index within the current cycle candidates for the current grid
-    /// of `screen`: the grid itself when listed, otherwise the nearest grid by
-    /// tile count (ties resolve to the larger grid) so cycling is well-defined.
+    /// Starting index within the display's cycle candidates for the current
+    /// grid of `screen`: the grid itself when listed, otherwise the nearest
+    /// grid by tile count (ties resolve to the larger grid) so cycling is
+    /// well-defined.
     static func cycleIndex(for screen: NSScreen) -> Int {
         let grid = grid(for: screen)
-        return cycleIndex(rows: grid.rows, cols: grid.cols)
+        return cycleIndex(rows: grid.rows, cols: grid.cols, in: cycleCandidates(for: screen))
     }
 
-    /// Pure variant of ``cycleIndex(for:)`` that takes the current grid
-    /// directly (used by unit tests). Depends only on the cycle settings.
-    static func cycleIndex(rows: Int, cols: Int) -> Int {
-        let grids = cycleCandidates()
+    /// Pure variant over an explicit candidate list (used by unit tests).
+    static func cycleIndex(rows: Int, cols: Int, in grids: [(rows: Int, cols: Int)]) -> Int {
         if let index = grids.firstIndex(where: { $0.rows == rows && $0.cols == cols }) {
             return index
         }
+        guard !grids.isEmpty else { return 0 }
         var best = 0
         var bestDistance = Int.max
         let currentArea = rows * cols
