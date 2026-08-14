@@ -86,6 +86,23 @@
         }
       }
     },
+    "FancyZones.Description" : {
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid window layout: hold ⇧ Shift while dragging a window to snap it into a zone, or arrange every window on a display into the grid."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口分区布局：按住 ⇧ Shift 拖拽窗口即可吸附到分区，或将当前显示器上的窗口一键排入网格。"
+          }
+        }
+      }
+    },
     "FancyZones.Grid" : {
       "extractionState" : "manual",
       "localizations" : {
@@ -151,6 +168,24 @@
           "stringUnit" : {
             "state" : "translated",
             "value" : "分区布局…"
+          }
+        }
+      }
+    },
+    "Zone-Set-Hint.text" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Grid window layout — hold ⇧ Shift while dragging a window to snap it into a zone, or arrange all windows on a display into the grid\"; ObjectID = \"Zone-Set-Hint\";",
+      "extractionState" : "manual",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Grid window layout — hold ⇧ Shift while dragging a window to snap it into a zone, or arrange all windows on a display into the grid"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "窗口分区布局——按住 ⇧ Shift 拖拽窗口即可吸附到分区，或将当前显示器上的窗口一键排入网格"
           }
         }
       }

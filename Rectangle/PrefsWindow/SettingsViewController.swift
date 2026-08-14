@@ -1057,15 +1057,20 @@ class SettingsViewController: NSViewController {
             headerLabel.alignment = .center
             headerLabel.translatesAutoresizingMaskIntoConstraints = false
 
+            let subtitleLabel = NSTextField(wrappingLabelWithString: NSLocalizedString("FancyZones.Description", tableName: "Main", value: "Grid window layout: hold ⇧ Shift while dragging a window to snap it into a zone, or arrange every window on a display into the grid.", comment: ""))
+            subtitleLabel.font = NSFont.systemFont(ofSize: NSFont.smallSystemFontSize)
+            subtitleLabel.textColor = .secondaryLabelColor
+            subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+
             var labels: [NSTextField] = []
             var colorWells: [NSColorWell] = []
-            var rows: [NSStackView] = []
+            var displayBlocks: [NSStackView] = []
             var gridCheckboxes: [NSButton] = []
 
-            // Per display: a row with its name and color well, then every
-            // candidate grid as a checkbox (split over two lines). The Cycle
-            // Grid shortcut and the display's status-menu submenu both use
-            // exactly the checked grids.
+            // Per display: a block with its name + color well, then every
+            // candidate grid as a checkbox (split over two lines, indented to
+            // align with the color well). The Cycle Grid shortcut and the
+            // display's status-menu submenu both use exactly the checked grids.
             for (screenIndex, screen) in NSScreen.screens.enumerated() {
                 let screenLabel = NSTextField(labelWithString: screen.localizedName)
                 screenLabel.alignment = .right
@@ -1088,16 +1093,21 @@ class SettingsViewController: NSViewController {
                 row.addArrangedSubview(colorWell)
                 labels.append(screenLabel)
                 colorWells.append(colorWell)
-                rows.append(row)
 
                 let mask = ZoneLayout.cycleGridMask(for: screen)
+                let block = NSStackView()
+                block.orientation = .vertical
+                block.alignment = .leading
+                block.spacing = 4
+                block.addArrangedSubview(row)
+                var checkRowConstraints: [NSLayoutConstraint] = []
                 let checkRow1 = NSStackView()
                 let checkRow2 = NSStackView()
-                for (checkRow, startIndex) in [(checkRow1, 0), (checkRow2, 5)] {
+                for (checkRow, startIndex) in [(checkRow1, 0), (checkRow2, 6)] {
                     checkRow.orientation = .horizontal
                     checkRow.alignment = .centerY
                     checkRow.spacing = 6
-                    for index in startIndex..<(startIndex + 5) where index < ZoneLayout.candidates.count {
+                    for index in startIndex..<(startIndex + 6) where index < ZoneLayout.candidates.count {
                         let candidate = ZoneLayout.candidates[index]
                         let checkbox = NSButton(checkboxWithTitle: "\(candidate.rows)×\(candidate.cols)", target: self, action: #selector(toggleZoneCycleSquareGrid(_:)))
                         checkbox.tag = screenIndex * 100 + index
@@ -1107,8 +1117,11 @@ class SettingsViewController: NSViewController {
                         checkRow.addArrangedSubview(checkbox)
                         gridCheckboxes.append(checkbox)
                     }
-                    rows.append(checkRow)
+                    block.addArrangedSubview(checkRow)
+                    checkRowConstraints.append(checkRow.leadingAnchor.constraint(equalTo: colorWell.leadingAnchor))
                 }
+                NSLayoutConstraint.activate(checkRowConstraints)
+                displayBlocks.append(block)
             }
             zoneCycleSquareGridCheckboxes = gridCheckboxes
 
@@ -1128,8 +1141,17 @@ class SettingsViewController: NSViewController {
 
             mainStackView.addArrangedSubview(headerLabel)
             mainStackView.setCustomSpacing(8, after: headerLabel)
-            for row in rows {
-                mainStackView.addArrangedSubview(row)
+            mainStackView.addArrangedSubview(subtitleLabel)
+            mainStackView.setCustomSpacing(10, after: subtitleLabel)
+            for (index, block) in displayBlocks.enumerated() {
+                mainStackView.addArrangedSubview(block)
+                if index < displayBlocks.count - 1 {
+                    let separator = NSBox()
+                    separator.boxType = .separator
+                    separator.translatesAutoresizingMaskIntoConstraints = false
+                    mainStackView.addArrangedSubview(separator)
+                    separator.widthAnchor.constraint(equalTo: mainStackView.widthAnchor).isActive = true
+                }
             }
             mainStackView.addArrangedSubview(divider)
             mainStackView.setCustomSpacing(8, after: divider)
@@ -1139,6 +1161,7 @@ class SettingsViewController: NSViewController {
 
             var constraints: [NSLayoutConstraint] = [
                 headerLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor),
+                subtitleLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -20),
                 hintLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -20)
             ]
             if let firstLabel = labels.first {

@@ -3680,13 +3680,13 @@ class ZoneLayoutTests: XCTestCase {
 
     func testCycleCandidatesRestricted() {
         // Only the checked candidate grids remain (bit i = candidates[i]).
-        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 3) | (1 << 8))
+        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 4) | (1 << 9))
         XCTAssertEqual(grids.map { "\($0.rows)×\($0.cols)" }, ["2×2", "3×3"])
     }
 
     func testCycleCandidatesCustomSelection() {
         // Mixed non-square selection: 1×2, 3×2, 3×4.
-        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 0) | (1 << 7) | (1 << 9))
+        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 0) | (1 << 8) | (1 << 10))
         XCTAssertEqual(grids.map { "\($0.rows)×\($0.cols)" }, ["1×2", "3×2", "3×4"])
     }
 
@@ -3697,19 +3697,19 @@ class ZoneLayoutTests: XCTestCase {
 
     func testCycleCandidatesIgnoresOutOfRangeBits() {
         // Bits beyond the candidate list (e.g. a stale 1<<20) are ignored.
-        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 3) | (1 << 9) | (1 << 20))
+        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 4) | (1 << 10) | (1 << 20))
         XCTAssertEqual(grids.map { "\($0.rows)×\($0.cols)" }, ["2×2", "3×4"])
     }
 
     func testCycleIndexMatchesCurrentGrid() {
-        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 3) | (1 << 8) | (1 << 9))
+        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 4) | (1 << 9) | (1 << 10))
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 2, cols: 2, in: grids), 0)
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 3, cols: 3, in: grids), 1)
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 3, cols: 4, in: grids), 2)
     }
 
     func testCycleIndexFallsBackToNearest() {
-        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 3) | (1 << 8))
+        let grids = ZoneLayout.cycleCandidates(restricted: true, mask: (1 << 4) | (1 << 9))
         // 1×2 has 2 tiles: nearest is 2×2 (4 tiles) → index 0.
         XCTAssertEqual(ZoneLayout.cycleIndex(rows: 1, cols: 2, in: grids), 0)
         // 3×4 has 12 tiles: 3×3 (9) is closer than 2×2 (4) → index 1.

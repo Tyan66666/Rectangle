@@ -309,13 +309,13 @@ Optionally restrict the Cycle Grid shortcut — and the status-menu grid options
 ```bash
 defaults write com.knollsoft.Rectangle cycleSquareFancyZonesOnly -bool true
 defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 1023
-# e.g. only 2×2 (index 3) and 3×3 (index 8): 1<<3 | 1<<8 = 264
-defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 264
+# e.g. only 2×2 (index 4) and 3×3 (index 9): 1<<4 | 1<<9 = 528
+defaults write com.knollsoft.Rectangle cycleSquareFancyZonesGrids -int 528
 
 Each display can have its own selection by appending the monitor's localized name, e.g.:
 
 ```bash
-defaults write com.knollsoft.Rectangle "cycleSquareFancyZonesGrids_Built-in Retina Display" -int 264
+defaults write com.knollsoft.Rectangle "cycleSquareFancyZonesGrids_Built-in Retina Display" -int 528
 ```
 
 Arrange (tile) all windows on the current screen into the zones. The default shortcut is ⌃⌥A — change it in Rectangle's preferences under "Show More", or bind a custom key like the tiling commands above:
