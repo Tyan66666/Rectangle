@@ -198,14 +198,6 @@ class SnappingManager {
         event.modifierFlags.contains(ZoneLayout.modifierFlags)
     }
 
-    /// Resolves the preview fill color for a screen: the per-display zone
-    /// color when one is set, otherwise the global footprint color. The zone
-    /// preview and the edge-snap preview both go through this, so they always
-    /// look identical.
-    private func previewColor(for screen: NSScreen) -> NSColor {
-        ZoneLayout.color(for: screen) ?? Defaults.footprintColor.typedValue?.nsColor ?? NSColor.black
-    }
-
     private func handleZoneDrag() {
         if currentSnapArea != nil {
             box?.orderOut(nil)
@@ -228,7 +220,6 @@ class SnappingManager {
         if box == nil {
             box = FootprintWindow()
         }
-        box?.setFillColor(previewColor(for: zone.screen))
         box?.setFrame(zone.rect, display: true)
         box?.orderFront(nil)
         currentZoneScreen = zone.screen
@@ -363,7 +354,6 @@ class SnappingManager {
                         if box == nil {
                             box = FootprintWindow()
                         }
-                        box!.setFillColor(previewColor(for: snapArea.screen))
                         if Defaults.footprintAnimationDurationMultiplier.value > 0 {
                             if !box!.realIsVisible, let origin = getFootprintAnimationOrigin(snapArea, newBoxRect) {
                                 let frame = CGRect(origin: origin, size: .zero)

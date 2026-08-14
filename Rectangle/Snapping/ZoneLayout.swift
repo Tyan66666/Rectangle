@@ -26,7 +26,6 @@ enum ZoneLayout {
     static let rowsKey = "fancyZonesRows"
     static let colsKey = "fancyZonesCols"
     static let gridCycleKey = "cycleFancyZonesGrid"
-    static let colorKey = "fancyZonesColor"
     static let cycleSquareOnlyKey = "cycleSquareFancyZonesOnly"
     static let cycleGridsKey = "cycleSquareFancyZonesGrids"
 
@@ -166,34 +165,6 @@ enum ZoneLayout {
             }
         }
         return best
-    }
-
-    // MARK: - Per-display zone color
-
-    /// Custom zone-preview color for `screen`, or nil to fall back to the
-    /// global footprint color.
-    static func color(for screen: NSScreen) -> NSColor? {
-        guard let raw = UserDefaults.standard.string(forKey: perMonitorKey(colorKey, screen)),
-              let data = raw.data(using: .utf8),
-              let color = try? JSONDecoder().decode(CodableColor.self, from: data) else {
-            return nil
-        }
-        return color.nsColor
-    }
-
-    /// Stores a per-display zone color (nil removes the override).
-    static func setColor(_ color: NSColor?, for screen: NSScreen) {
-        let key = perMonitorKey(colorKey, screen)
-        if let color {
-            let sRGB = color.usingColorSpace(.sRGB) ?? color
-            let codable = CodableColor(nsColor: sRGB)
-            if let data = try? JSONEncoder().encode(codable),
-               let raw = String(data: data, encoding: .utf8) {
-                UserDefaults.standard.set(raw, forKey: key)
-            }
-        } else {
-            UserDefaults.standard.removeObject(forKey: key)
-        }
     }
 
     // MARK: - Zone computation (AppKit coordinates, bottom-left origin)

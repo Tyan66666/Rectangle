@@ -1062,44 +1062,23 @@ class SettingsViewController: NSViewController {
             subtitleLabel.textColor = .secondaryLabelColor
             subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
 
-            var labels: [NSTextField] = []
-            var colorWells: [NSColorWell] = []
             var displayBlocks: [NSStackView] = []
             var gridCheckboxes: [NSButton] = []
 
-            // Per display: a block with its name + color well, then every
-            // candidate grid as a checkbox (split over two lines, indented to
-            // align with the color well). The Cycle Grid shortcut and the
-            // display's status-menu submenu both use exactly the checked grids.
+            // Per display: a block with its name, then every candidate grid as
+            // a checkbox (split over two lines, slightly indented). The Cycle
+            // Grid shortcut and the display's status-menu submenu both use
+            // exactly the checked grids.
             for (screenIndex, screen) in NSScreen.screens.enumerated() {
                 let screenLabel = NSTextField(labelWithString: screen.localizedName)
-                screenLabel.alignment = .right
                 screenLabel.translatesAutoresizingMaskIntoConstraints = false
-
-                let colorWell = NSColorWell()
-                colorWell.color = ZoneLayout.color(for: screen)
-                    ?? Defaults.footprintColor.typedValue?.nsColor
-                    ?? NSColor.black
-                colorWell.tag = screenIndex
-                colorWell.target = self
-                colorWell.action = #selector(zoneColorChanged(_:))
-                colorWell.translatesAutoresizingMaskIntoConstraints = false
-
-                let row = NSStackView()
-                row.orientation = .horizontal
-                row.alignment = .centerY
-                row.spacing = 18
-                row.addArrangedSubview(screenLabel)
-                row.addArrangedSubview(colorWell)
-                labels.append(screenLabel)
-                colorWells.append(colorWell)
 
                 let mask = ZoneLayout.cycleGridMask(for: screen)
                 let block = NSStackView()
                 block.orientation = .vertical
                 block.alignment = .leading
                 block.spacing = 4
-                block.addArrangedSubview(row)
+                block.addArrangedSubview(screenLabel)
                 var checkRowConstraints: [NSLayoutConstraint] = []
                 let checkRow1 = NSStackView()
                 let checkRow2 = NSStackView()
@@ -1118,7 +1097,7 @@ class SettingsViewController: NSViewController {
                         gridCheckboxes.append(checkbox)
                     }
                     block.addArrangedSubview(checkRow)
-                    checkRowConstraints.append(checkRow.leadingAnchor.constraint(equalTo: colorWell.leadingAnchor))
+                    checkRowConstraints.append(checkRow.leadingAnchor.constraint(equalTo: screenLabel.leadingAnchor, constant: 6))
                 }
                 NSLayoutConstraint.activate(checkRowConstraints)
                 displayBlocks.append(block)
@@ -1164,16 +1143,6 @@ class SettingsViewController: NSViewController {
                 subtitleLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -20),
                 hintLabel.widthAnchor.constraint(equalTo: mainStackView.widthAnchor, constant: -20)
             ]
-            if let firstLabel = labels.first {
-                for label in labels {
-                    constraints.append(label.widthAnchor.constraint(equalTo: firstLabel.widthAnchor))
-                }
-                constraints.append(firstLabel.widthAnchor.constraint(greaterThanOrEqualToConstant: 140))
-            }
-            for well in colorWells {
-                constraints.append(well.widthAnchor.constraint(equalToConstant: 44))
-                constraints.append(well.heightAnchor.constraint(equalToConstant: 23))
-            }
 
             NSLayoutConstraint.activate(constraints)
 
@@ -1192,12 +1161,6 @@ class SettingsViewController: NSViewController {
             zoneLayoutPopover = popover
         }
         zoneLayoutPopover?.show(relativeTo: sender.bounds, of: sender, preferredEdge: .maxY)
-    }
-
-    @objc private func zoneColorChanged(_ sender: NSColorWell) {
-        let screens = NSScreen.screens
-        guard sender.tag >= 0, sender.tag < screens.count else { return }
-        ZoneLayout.setColor(sender.color, for: screens[sender.tag])
     }
 
     @objc private func toggleZoneCycleSquareOnly(_ sender: NSButton) {

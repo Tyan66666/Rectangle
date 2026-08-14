@@ -4,7 +4,6 @@ import Cocoa
 
 class FootprintWindow: NSWindow {
     private var orderOutCanceled = false
-    private var boxView: NSBox!
     
     init() {
         let initialRect = NSRect(x: 0, y: 0, width: 0, height: 0)
@@ -42,17 +41,9 @@ class FootprintWindow: NSWindow {
         }
         boxView.wantsLayer = true
         boxView.fillColor = Defaults.footprintColor.typedValue?.nsColor ?? NSColor.black
-        self.boxView = boxView
-        
         contentView = boxView
     }
 
-    /// Updates the preview fill color. Both the zone preview (Shift + drag) and
-    /// the edge-snap preview share this same box, so every preview resolves its
-    /// color through the same call and they always match.
-    func setFillColor(_ color: NSColor) {
-        boxView.fillColor = color
-    }
     
     override var isVisible: Bool {
         // Workaround for footprint getting pushed off of Stage Manager
@@ -71,12 +62,13 @@ class FootprintWindow: NSWindow {
     }
     
     override func orderFront(_ sender: Any?) {
-        if Defaults.footprintFade.userDisabled {
-            super.orderFront(sender)
-        } else {
-            orderOutCanceled = true
-            super.orderFront(sender)
-            animator().alphaValue = Defaults.footprintAlpha.cgFloat
+        // Mark any in-flight fade-out as canceled so its completion won't
+        // remove the window, and set the alpha immediately (no animation) so
+        // the preview shows up right away even mid-fade.
+        orderOutCanceled = true
+        super.orderFront(sender)
+        if !Defaults.footprintFade.userDisabled {
+            alphaValue = Defaults.footprintAlpha.cgFloat
         }
     }
     
@@ -88,7 +80,13 @@ class FootprintWindow: NSWindow {
             NSAnimationContext.runAnimationGroup { changes in
                 animator().alphaValue = 0.0
             } completionHandler: {
-                if !self.orderOutCanceled {
+                if self.orderOutCanceled {
+                    // The window was re-shown while the fade was running; the
+                    // fade animation may have won the race and left alpha at 0,
+                    // which would leave an invisible modalPanel-level window
+                    // swallowing clicks. Force it back to visible.
+                    self.alphaValue = Defaults.footprintAlpha.cgFloat
+                } else {
                     super.orderOut(nil)
                 }
             }

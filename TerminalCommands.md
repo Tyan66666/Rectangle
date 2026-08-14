@@ -298,12 +298,6 @@ Each setting can be overridden per monitor by appending the monitor's localized 
 defaults write com.knollsoft.Rectangle "fancyZonesRows_Built-in Retina Display" -int 3
 ```
 
-Give a specific display its own zone-preview color (falls back to the global footprint color when unset). The value is a JSON-encoded color, e.g.:
-
-```bash
-defaults write com.knollsoft.Rectangle "fancyZonesColor_Built-in Retina Display" -string '{"red":0.2,"green":0.45,"blue":0.95,"alpha":1.0}'
-```
-
 Optionally restrict the Cycle Grid shortcut — and the status-menu grid options — to the checked grids. `cycleSquareFancyZonesGrids` is a bitmask: bit i set means the i-th candidate grid participates, where the candidates are 1×2, 1×3, 1×4, 2×2, 2×3, 2×4, 3×1, 3×2, 3×3, 3×4 (indices 0–9). The default 1023 enables every candidate:
 
 ```bash
