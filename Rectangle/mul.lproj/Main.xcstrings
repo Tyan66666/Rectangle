@@ -154,8 +154,8 @@
         }
       }
     },
-    "Zone-Set-Btn.title" : {
-      "comment" : "Class = \"NSButtonCell\"; title = \"Zone Layout…\"; ObjectID = \"Zone-Set-Btn\";",
+    "Zone-Set-Cel.title" : {
+      "comment" : "Class = \"NSButtonCell\"; title = \"Zone Layout…\"; ObjectID = \"Zone-Set-Cel\";",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
@@ -172,8 +172,8 @@
         }
       }
     },
-    "Zone-Set-Hint.text" : {
-      "comment" : "Class = \"NSTextFieldCell\"; title = \"Grid window layout — hold ⇧ Shift while dragging a window to snap it into a zone, or arrange all windows on a display into the grid\"; ObjectID = \"Zone-Set-Hint\";",
+    "Zone-Set-Hint-Cel.title" : {
+      "comment" : "Class = \"NSTextFieldCell\"; title = \"Grid window layout — hold ⇧ Shift while dragging a window to snap it into a zone, or arrange all windows on a display into the grid\"; ObjectID = \"Zone-Set-Hint-Cel\";",
       "extractionState" : "manual",
       "localizations" : {
         "en" : {
