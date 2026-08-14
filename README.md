@@ -2,20 +2,18 @@
 
 [![Build](https://github.com/rxhanson/Rectangle/actions/workflows/build.yml/badge.svg)](https://github.com/rxhanson/Rectangle/actions/workflows/build.yml)
 
-Rectangle is a window management app based on Spectacle, written in Swift.
+## ✨ 本 Fork 新增：Zone Layout 分区布局
+
+**Zone Layout** 将窗口排列到当前显示器的网格中，默认关闭——从状态栏菜单（"Zone Layout"）开启。
+
+- **一键排列**：为 **Arrange Windows in Zones** 绑定快捷键（默认 ⌃Z），一键将当前显示器上的所有窗口排入网格；显示器跟随聚焦窗口，回退到光标所在显示器。
+- **Shift + 拖拽**：按住 ⇧ Shift 拖拽窗口即可看到分区网格预览，松开后窗口填充光标所在分区。
+- **每台显示器独立网格**：每台显示器可单独设置网格大小（1×2、2×3、3×3、…），从状态栏菜单选择，互不影响。
+- **限定循环网格**：可选的 **Cycle Grid** 快捷键可在网格间循环；在 设置 → **Zone Layout…** 中勾选网格后，循环仅在勾选的网格之间进行——每台显示器可分别勾选，状态栏菜单以 ✓ 标示当前网格。
+- **溢出堆叠**：超出网格数量的窗口自动堆叠在最后一个分区。
+- **URL 触发**：`rectangle://execute-action?name=arrange-windows-in-zones`
 
 <img width="962" height="886" alt="image" src="https://github.com/user-attachments/assets/e8d88e5f-7d4f-43bc-a82e-146c42f92d68" />
-
-### Zone Layout
-
-Zone Layout arranges windows into a grid on the current display. It's disabled by default — enable it from the status-bar menu ("Zone Layout").
-
-- **One-key arrange** — bind a shortcut to **Arrange Windows in Zones** in the Keyboard Shortcuts tab (default ⌃Z). It moves every window on the current display into the grid. The display follows the focused window, falling back to the cursor.
-- **Shift + drag** — hold Shift while dragging a window to reveal the zone grid footprint; release to fill the zone under the cursor.
-- **Per-display grid** — each display can have its own grid size (2×2, 2×3, 3×3, …) chosen from the status-bar menu. The optional **Cycle Grid** shortcut steps through grid sizes for the current display only — in Settings → **Zone Layout…** it can be restricted to exactly the checked grids (1×2, 2×3, 3×3, …) — each display can have its own selection, mirrored in the status-bar menu with a checkmark on the current grid — instead of every size.
-- **Overflow** — extra windows beyond the grid stack in the last zone.
-
-It can also be triggered by URL with the action name `arrange-windows-in-zones`.
 
 ## System Requirements
 
